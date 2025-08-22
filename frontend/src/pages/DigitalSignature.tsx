@@ -36,7 +36,6 @@ export default function DigitalSignature() {
       const mockSignatures: DigitalSignatureType[] = [
         {
           id: '1',
-          medical_record_id: 'record-1',
           document_type: 'prescription',
           document_hash: 'hash123',
           signer_email: 'paciente@email.com',
@@ -50,7 +49,6 @@ export default function DigitalSignature() {
         },
         {
           id: '2',
-          medical_record_id: 'record-2',
           document_type: 'medical_report',
           document_hash: 'hash456',
           signer_email: 'maria@email.com',
@@ -148,7 +146,6 @@ export default function DigitalSignature() {
       // Simular criação de assinatura
       const newSignature: DigitalSignatureType = {
         id: Date.now().toString(),
-        medical_record_id: 'new-record',
         document_type: formData.documentType,
         document_hash: 'hash' + Date.now(),
         signer_email: formData.signerEmail,

@@ -4,7 +4,7 @@ export type AppointmentStatus = 'scheduled' | 'confirmed' | 'in_progress' | 'com
 export type PaymentStatus = 'pending' | 'paid' | 'cancelled' | 'refunded'
 export type InvoiceStatus = 'pending' | 'issued' | 'error' | 'cancelled'
 export type SignatureStatus = 'pending' | 'sent' | 'signed' | 'failed' | 'cancelled'
-export type DocumentType = 'prescription' | 'report' | 'certificate'
+export type DocumentType = 'prescription' | 'report' | 'certificate' | 'medical_report' | 'exam_result' | 'consent_form'
 
 // User interfaces
 export interface User {

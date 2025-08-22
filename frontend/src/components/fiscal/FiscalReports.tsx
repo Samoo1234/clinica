@@ -37,7 +37,9 @@ const FiscalReports: React.FC = () => {
             service_description: 'Consulta oftalmológica',
             status: 'issued',
             issue_date: new Date().toISOString(),
-            retry_count: 0
+            retry_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           },
           {
             id: '2',
@@ -49,7 +51,9 @@ const FiscalReports: React.FC = () => {
             service_description: 'Exame de refração',
             status: 'pending',
             issue_date: null,
-            retry_count: 0
+            retry_count: 0,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }
         ],
         summary: {
@@ -65,7 +69,7 @@ const FiscalReports: React.FC = () => {
       };
       
       setReport(mockReport);
-      showError('Usando dados de demonstração - Erro ao conectar com o servidor');
+      showError('error');
     } finally {
       setLoading(false);
     }
