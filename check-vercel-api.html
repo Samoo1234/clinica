@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste API Vercel</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .loading { background-color: #fff3cd; border-color: #ffeaa7; }
+        button { padding: 10px 20px; margin: 10px 5px; cursor: pointer; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 3px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste da API Vercel</h1>
+    <p>Use este arquivo para testar se sua API na Vercel está funcionando.</p>
+    
+    <div>
+        <label for="baseUrl">URL da Vercel:</label>
+        <input type="text" id="baseUrl" placeholder="https://seu-projeto.vercel.app" style="width: 300px; padding: 5px;">
+        <button onclick="runAllTests()">🚀 Testar Tudo</button>
+    </div>
+
+    <div id="results"></div>
+
+    <script>
+        async function testEndpoint(name, url, options = {}) {
+            const resultDiv = document.createElement('div');
+            resultDiv.className = 'test loading';
+            resultDiv.innerHTML = `<h3>${name}</h3><p>⏳ Testando...</p>`;
+            document.getElementById('results').appendChild(resultDiv);
+
+            try {
+                const response = await fetch(url, options);
+                const data = await response.text();
+                
+                let parsedData;
+                try {
+                    parsedData = JSON.parse(data);
+                } catch {
+                    parsedData = data;
+                }
+
+                if (response.ok) {
+                    resultDiv.className = 'test success';
+                    resultDiv.innerHTML = `
+                        <h3>✅ ${name}</h3>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Resposta:</strong></p>
+                        <pre>${JSON.stringify(parsedData, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.className = 'test error';
+                    resultDiv.innerHTML = `
+                        <h3>❌ ${name}</h3>
+                        <p><strong>Status:</strong> ${response.status} ${response.statusText}</p>
+                        <p><strong>Erro:</strong></p>
+                        <pre>${JSON.stringify(parsedData, null, 2)}</pre>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.className = 'test error';
+                resultDiv.innerHTML = `
+                    <h3>❌ ${name}</h3>
+                    <p><strong>Erro de Rede:</strong> ${error.message}</p>
+                    <p>Verifique se a URL está correta e se a Vercel está funcionando.</p>
+                `;
+            }
+        }
+
+        async function runAllTests() {
+            const baseUrl = document.getElementById('baseUrl').value.trim();
+            if (!baseUrl) {
+                alert('Por favor, insira a URL da sua aplicação na Vercel');
+                return;
+            }
+
+            // Limpar resultados anteriores
+            document.getElementById('results').innerHTML = '';
+
+            // Testes
+            await testEndpoint('Health Check', `${baseUrl}/api/health`);
+            await testEndpoint('Financial Dashboard', `${baseUrl}/api/financial/dashboard`);
+            await testEndpoint('Auth Login', `${baseUrl}/api/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'test@test.com', password: 'test' })
+            });
+            await testEndpoint('Patients List', `${baseUrl}/api/patients`);
+            await testEndpoint('Appointments List', `${baseUrl}/api/appointments`);
+        }
+
+        // Auto-preencher com URL comum da Vercel
+        window.onload = function() {
+            const urlInput = document.getElementById('baseUrl');
+            urlInput.value = 'https://visioncare-five.vercel.app'; // Ajuste conforme necessário
+        }
+    </script>
+</body>
+</html>
