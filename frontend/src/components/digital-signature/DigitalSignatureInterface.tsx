@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { MedicalRecord, DigitalSignature } from '../../types/database'
 import { digitalSignatureService } from '../../services/digital-signature'
 import { useAuth } from '../../contexts/SimpleAuthContext'

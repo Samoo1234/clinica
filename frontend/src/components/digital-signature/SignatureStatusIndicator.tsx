@@ -1,4 +1,4 @@
-import React from 'react'
+// React import removed
 import { SignatureStatus } from '../../types/database'
 import { digitalSignatureService } from '../../services/digital-signature'
 import { 

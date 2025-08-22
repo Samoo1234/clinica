@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { nfseService } from '../../services/nfse';
-import { appointmentsService } from '../../services/appointments';
-import { patientsService } from '../../services/patients';
+import { appointmentService } from '../../services/appointments';
+import { patientService } from '../../services/patients';
 import { useToast } from '../../contexts/ToastContext';
 import { 
   Search, 

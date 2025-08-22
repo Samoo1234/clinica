@@ -1,6 +1,9 @@
 import { supabase } from '../lib/supabase'
 import type { Patient, CreatePatientData, UpdatePatientData } from '../types/database'
 
+// Re-export Patient type for components
+export type { Patient }
+
 export interface PaginationOptions {
   page?: number
   limit?: number

@@ -33,7 +33,7 @@ export function DraggableCalendarView({
   const [draggedAppointment, setDraggedAppointment] = useState<AppointmentWithRelations | null>(null)
   const [dragOverDate, setDragOverDate] = useState<Date | null>(null)
   const [isDragging, setIsDragging] = useState(false)
-  const [doctors, setDoctors] = useState<Doctor[]>([{ id: '', name: 'Todos os médicos' }])
+  const [doctors, setDoctors] = useState<Doctor[]>([{ id: '', name: 'Todos os médicos', email: '', role: 'doctor' }])
 
   const year = currentDate.getFullYear()
   const month = currentDate.getMonth()
@@ -47,7 +47,7 @@ export function DraggableCalendarView({
   const loadDoctors = async () => {
     try {
       const doctorsList = await userService.getDoctors()
-      setDoctors([{ id: '', name: 'Todos os médicos' }, ...doctorsList])
+      setDoctors([{ id: '', name: 'Todos os médicos', email: '', role: 'doctor' }, ...doctorsList])
     } catch (error) {
       console.error('Error loading doctors:', error)
       // Keep default doctors list if loading fails

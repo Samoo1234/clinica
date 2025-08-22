@@ -1,4 +1,4 @@
-import React from 'react'
+// React import removed
 import { DigitalSignature } from '../../types/database'
 import { digitalSignatureService } from '../../services/digital-signature'
 import { useToast } from '../../contexts/ToastContext'

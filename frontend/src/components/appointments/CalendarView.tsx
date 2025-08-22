@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ChevronLeft, ChevronRight, Plus, Filter } from 'lucide-react'
-import { getCalendarDays, getMonthName, getDayName, formatTime, addMonths } from '../../utils/calendar'
+import { getCalendarDays, getMonthName, formatTime, addMonths } from '../../utils/calendar'
 import { AppointmentWithRelations } from '../../services/appointments'
 
 interface CalendarViewProps {
