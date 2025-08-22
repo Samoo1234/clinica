@@ -226,7 +226,7 @@ export function MedicalRecordForm({ patient, record, onSave, onCancel }: Medical
       
     } catch (error) {
       console.error('Error saving record:', error)
-      showToast('Erro ao salvar prontuário', 'error')
+      showToast('error', 'Erro ao salvar prontuário')
     } finally {
       setLoading(false)
     }

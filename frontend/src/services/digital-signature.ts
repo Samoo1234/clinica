@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
 
 export interface CreateSignatureRequest {
   recordId: string
-  documentType: 'prescription' | 'report' | 'certificate'
+  documentType: 'prescription' | 'report' | 'certificate' | 'medical_report' | 'exam_result' | 'consent_form'
   documentContent: string
   signerEmail: string
   signerName: string

@@ -88,9 +88,12 @@ class NFSeService {
 
   // Invoice management
   async issueInvoice(data: {
-    appointment_id: string;
+    appointment_id?: string;
     amount: number;
     service_description: string;
+    patient_name?: string;
+    patient_cpf?: string;
+    patient_email?: string;
   }): Promise<Invoice> {
     const response = await fetch(`${this.baseUrl}/issue`, {
       method: 'POST',

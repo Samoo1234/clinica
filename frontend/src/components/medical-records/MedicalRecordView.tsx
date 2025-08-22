@@ -42,7 +42,7 @@ export function MedicalRecordView({ record, patient, onEdit, onBack }: MedicalRe
       setAttachments(attachmentList)
     } catch (error) {
       console.error('Error loading attachments:', error)
-      showToast('Erro ao carregar anexos', 'error')
+      showToast('error', 'Erro ao carregar anexos')
     } finally {
       setLoadingAttachments(false)
     }
@@ -61,7 +61,7 @@ export function MedicalRecordView({ record, patient, onEdit, onBack }: MedicalRe
       
     } catch (error) {
       console.error('Error downloading file:', error)
-      showToast('Erro ao baixar arquivo', 'error')
+      showToast('error', 'Erro ao baixar arquivo')
     }
   }
 

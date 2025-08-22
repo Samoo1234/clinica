@@ -59,7 +59,7 @@ export function MedicalRecords() {
       await loadMedicalRecords(patientId)
     } catch (error) {
       console.error('Error loading patient:', error)
-      showToast('Erro ao carregar dados do paciente', 'error')
+      showToast('error', 'Erro ao carregar dados do paciente')
     } finally {
       setLoading(false)
     }
@@ -71,7 +71,7 @@ export function MedicalRecords() {
       setSelectedRecord(record)
     } catch (error) {
       console.error('Error loading record:', error)
-      showToast('Erro ao carregar prontuário', 'error')
+      showToast('error', 'Erro ao carregar prontuário')
     }
   }
 
@@ -84,7 +84,7 @@ export function MedicalRecords() {
       setMedicalRecords(records)
     } catch (error) {
       console.error('Error loading medical records:', error)
-      showToast('Erro ao carregar prontuários', 'error')
+      showToast('error', 'Erro ao carregar prontuários')
     } finally {
       setRecordsLoading(false)
     }
@@ -131,7 +131,7 @@ export function MedicalRecords() {
     }
     setViewMode('list')
     setSearchParams({ patientId: selectedPatient!.id, mode: 'list' })
-    showToast('Prontuário salvo com sucesso', 'success')
+    showToast('success', 'Prontuário salvo com sucesso')
   }
 
   const handleBackToList = () => {

@@ -35,7 +35,7 @@ export function PatientSelector({ onPatientSelect }: PatientSelectorProps) {
         setPatients(result.data)
       } catch (error) {
         console.error('Error searching patients:', error)
-        showToast('Erro ao buscar pacientes', 'error')
+        showToast('error', 'Erro ao buscar pacientes')
         setPatients([])
       } finally {
         setLoading(false)

@@ -38,7 +38,7 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
       setAttachments(attachmentList)
     } catch (error) {
       console.error('Error loading attachments:', error)
-      showToast('Erro ao carregar anexos', 'error')
+      showToast('error', 'Erro ao carregar anexos')
     } finally {
       setLoading(false)
     }
@@ -64,13 +64,13 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
     ]
     
     if (!allowedTypes.includes(file.type)) {
-      showToast('Tipo de arquivo não permitido. Use imagens, PDFs ou documentos Word.', 'error')
+      showToast('error', 'Tipo de arquivo não permitido', 'Use imagens, PDFs ou documentos Word.')
       return
     }
 
     // Validate file size (10MB limit)
     if (file.size > 10 * 1024 * 1024) {
-      showToast('Arquivo muito grande. Limite de 10MB.', 'error')
+      showToast('error', 'Arquivo muito grande', 'Limite de 10MB.')
       return
     }
 
@@ -78,10 +78,10 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
       setUploading(true)
       const attachment = await medicalRecordsService.uploadAttachment(recordId, file)
       setAttachments(prev => [attachment, ...prev])
-      showToast('Arquivo enviado com sucesso', 'success')
+      showToast('success', 'Arquivo enviado com sucesso')
     } catch (error) {
       console.error('Error uploading file:', error)
-      showToast('Erro ao enviar arquivo', 'error')
+      showToast('error', 'Erro ao enviar arquivo')
     } finally {
       setUploading(false)
     }
@@ -101,7 +101,7 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
       
     } catch (error) {
       console.error('Error downloading file:', error)
-      showToast('Erro ao baixar arquivo', 'error')
+      showToast('error', 'Erro ao baixar arquivo')
     }
   }
 
@@ -111,10 +111,10 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
     try {
       await medicalRecordsService.deleteAttachment(attachment.id)
       setAttachments(prev => prev.filter(a => a.id !== attachment.id))
-      showToast('Anexo excluído com sucesso', 'success')
+      showToast('success', 'Anexo excluído com sucesso')
     } catch (error) {
       console.error('Error deleting attachment:', error)
-      showToast('Erro ao excluir anexo', 'error')
+      showToast('error', 'Erro ao excluir anexo')
     }
   }
 

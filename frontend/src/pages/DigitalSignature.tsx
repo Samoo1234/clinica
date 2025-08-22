@@ -36,8 +36,11 @@ export default function DigitalSignature() {
       const mockSignatures: DigitalSignatureType[] = [
         {
           id: '1',
+          record_id: 'record-1',
           document_type: 'prescription',
-          document_hash: 'hash123',
+          document_content: 'Conteúdo da receita',
+          signature_provider: 'DocuSign',
+          signature_data: {},
           signer_email: 'paciente@email.com',
           signer_name: 'João Silva',
           status: 'signed',
@@ -49,8 +52,11 @@ export default function DigitalSignature() {
         },
         {
           id: '2',
+          record_id: 'record-2',
           document_type: 'medical_report',
-          document_hash: 'hash456',
+          document_content: 'Conteúdo do laudo',
+          signature_provider: 'DocuSign',
+          signature_data: {},
           signer_email: 'maria@email.com',
           signer_name: 'Maria Santos',
           status: 'pending',
@@ -146,8 +152,11 @@ export default function DigitalSignature() {
       // Simular criação de assinatura
       const newSignature: DigitalSignatureType = {
         id: Date.now().toString(),
+        record_id: 'new-record',
         document_type: formData.documentType,
-        document_hash: 'hash' + Date.now(),
+        document_content: formData.documentContent || 'Conteúdo do documento',
+        signature_provider: 'DocuSign',
+        signature_data: {},
         signer_email: formData.signerEmail,
         signer_name: formData.signerName,
         status: 'pending',
