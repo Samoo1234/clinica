@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase'
 import type { Patient, CreatePatientData, UpdatePatientData } from '../types/database'
+import { isDemoMode, demoPatients, showDemoWarning } from './demo-mode'
 
 // Re-export Patient type for components
 export type { Patient }
@@ -151,6 +152,28 @@ export class PatientService {
    * Get all patients with pagination
    */
   static async getAllPatients(options: PaginationOptions = {}): Promise<PaginatedResult<Patient>> {
+    // Modo demo quando Supabase não está configurado
+    if (isDemoMode) {
+      showDemoWarning()
+      const page = options.page || 1
+      const limit = options.limit || 10
+      const startIndex = (page - 1) * limit
+      const endIndex = startIndex + limit
+      const paginatedData = demoPatients.slice(startIndex, endIndex)
+      
+      return {
+        data: paginatedData,
+        pagination: {
+          page,
+          limit,
+          total: demoPatients.length,
+          totalPages: Math.ceil(demoPatients.length / limit),
+          hasNext: endIndex < demoPatients.length,
+          hasPrev: page > 1
+        }
+      }
+    }
+
     const params = new URLSearchParams()
     if (options.page) params.append('page', options.page.toString())
     if (options.limit) params.append('limit', options.limit.toString())
