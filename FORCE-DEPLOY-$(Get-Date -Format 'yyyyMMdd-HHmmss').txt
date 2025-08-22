@@ -1,0 +1,14 @@
+FORCE VERCEL DEPLOY - $(Get-Date)
+
+This file is created to trigger a new Vercel deployment.
+
+Recent changes:
+- Fixed backend TypeScript import issues
+- Simplified API to use pure JavaScript
+- Added mock endpoints for testing
+- Optimized vercel.json configuration
+
+The Vercel deployment should pick up this change and redeploy the application.
+
+Timestamp: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Commit: Force deploy trigger

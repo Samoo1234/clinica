@@ -1,0 +1,12 @@
+TRIGGER VERCEL DEPLOY
+
+Timestamp: $(date)
+Purpose: Force Vercel to detect changes and redeploy
+
+Changes made:
+- Fixed backend API compatibility issues
+- Simplified JavaScript-only backend
+- Added mock endpoints
+- Optimized Vercel configuration
+
+This file exists solely to trigger a new deployment.
