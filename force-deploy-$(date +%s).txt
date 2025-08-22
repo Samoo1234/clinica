@@ -1,0 +1,10 @@
+Force deploy trigger - $(date)
+
+Changes applied:
+- Fixed Supabase import paths in financial and nfse services
+- Added financial routes to backend API
+- Created comprehensive environment variable checking
+- Added connectivity testing component
+- Unified Supabase configuration across all services
+
+This file forces a new deployment to ensure all changes are applied.
