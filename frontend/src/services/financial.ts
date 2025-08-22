@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase } from '../lib/supabase';
 
 // Helper function to get auth headers
 const getAuthHeaders = () => {

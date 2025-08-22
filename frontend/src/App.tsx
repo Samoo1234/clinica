@@ -6,6 +6,7 @@ import { ModuleProvider } from './contexts/ModuleContext'
 import { SimpleLogin } from './components/SimpleLogin'
 import { AppRoutes } from './routes/AppRoutes'
 import { VercelDebugPanel } from './components/debug/VercelDebugPanel'
+import { ConnectivityTest } from './components/debug/ConnectivityTest'
 
 const queryClient = new QueryClient()
 
@@ -38,6 +39,7 @@ function App() {
           <ModuleProvider>
             <ToastProvider>
               <VercelDebugPanel />
+              <ConnectivityTest />
               <AppContent />
             </ToastProvider>
           </ModuleProvider>
