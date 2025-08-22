@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback } from 'react'
 import { ToastContainer, ToastMessage, ToastType } from '../components/ui/Toast'
 
 interface ToastContextType {
-  showToast: (title: string, type: ToastType, message?: string, duration?: number) => void
+  showToast: (type: ToastType, title: string, message?: string, duration?: number) => void
   showSuccess: (title: string, message?: string) => void
   showError: (title: string, message?: string) => void
   showWarning: (title: string, message?: string) => void
@@ -27,8 +27,8 @@ export function ToastProvider({ children }: ToastProviderProps) {
   const [toasts, setToasts] = useState<ToastMessage[]>([])
 
   const showToast = useCallback((
-    title: string,
-    type: ToastType, 
+    type: ToastType,
+    title: string, 
     message?: string, 
     duration?: number
   ) => {
