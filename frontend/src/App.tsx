@@ -5,6 +5,7 @@ import { ToastProvider } from './contexts/ToastContext'
 import { ModuleProvider } from './contexts/ModuleContext'
 import { SimpleLogin } from './components/SimpleLogin'
 import { AppRoutes } from './routes/AppRoutes'
+import { VercelDebugPanel } from './components/debug/VercelDebugPanel'
 
 const queryClient = new QueryClient()
 
@@ -36,6 +37,7 @@ function App() {
         <AuthProvider>
           <ModuleProvider>
             <ToastProvider>
+              <VercelDebugPanel />
               <AppContent />
             </ToastProvider>
           </ModuleProvider>
