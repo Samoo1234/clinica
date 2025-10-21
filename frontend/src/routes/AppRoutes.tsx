@@ -2,7 +2,7 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { Layout } from '../components/layout/Layout'
 import { Dashboard } from '../pages/Dashboard'
 import { Patients } from '../pages/Patients'
-import { Appointments } from '../pages/Appointments'
+import { AppointmentsExternal } from '../pages/AppointmentsExternal'
 import { MedicalRecords } from '../pages/MedicalRecords'
 import Consultations from '../pages/Consultations'
 import Financial from '../pages/Financial'
@@ -44,7 +44,7 @@ export function AppRoutes() {
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/patients" element={<Patients />} />
-        <Route path="/appointments" element={<Appointments />} />
+        <Route path="/appointments" element={<AppointmentsExternal />} />
         <Route path="/medical-records" element={<MedicalRecords />} />
         <Route path="/consultations" element={<Consultations />} />
         <Route path="/financial" element={<Financial />} />

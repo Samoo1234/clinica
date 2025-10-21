@@ -50,6 +50,8 @@ export interface Patient {
   address: PatientAddress
   insurance_info?: InsuranceInfo
   emergency_contact?: EmergencyContact
+  nome_pai?: string
+  nome_mae?: string
   created_at: string
   updated_at: string
 }

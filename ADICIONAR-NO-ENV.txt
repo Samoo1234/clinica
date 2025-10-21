@@ -1,0 +1,15 @@
+# ============================================
+# COPIE ESTAS LINHAS E ADICIONE NO SEU .env
+# ============================================
+
+# Sistema Externo de Agendamentos
+VITE_SUPABASE_EXTERNO_URL=https://dmsaqxuoruinwpnonpky.supabase.co
+VITE_SUPABASE_EXTERNO_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtc2FxeHVvcnVpbndwbm9ucGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MzQyNTYsImV4cCI6MjA2ODUxMDI1Nn0.qgUE3Lpn5-dgphbW6k59Pu4M-xkwpI6KtAYR7m5FkdU
+
+# ============================================
+# INSTRUÇÕES:
+# 1. Abra o arquivo .env na raiz do projeto
+# 2. Cole estas 2 linhas no final do arquivo
+# 3. Salve o arquivo
+# 4. Reinicie o servidor: npm run dev
+# ============================================

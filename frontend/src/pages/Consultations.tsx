@@ -7,7 +7,9 @@ import { ConsultationFilters } from '../components/consultations/ConsultationFil
 import { StartConsultationModal } from '../components/consultations/StartConsultationModal'
 import { consultationsService } from '../services/consultations'
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
-import { Plus, Calendar, Clock, Users } from 'lucide-react'
+import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
+import { getLocalDateString, isToday, isTodayOrFuture } from '../utils/date'
 
 export default function Consultations() {
   const { user } = useAuth()
@@ -25,6 +27,11 @@ export default function Consultations() {
     dateTo: ''
   })
 
+  // Agendamentos externos
+  const [agendamentosExternos, setAgendamentosExternos] = useState<AgendamentoExterno[]>([])
+  const [loadingExternos, setLoadingExternos] = useState(false)
+  const [mostrarExternos, setMostrarExternos] = useState(false)
+
   // Stats
   const [stats, setStats] = useState<ConsultationStats>({
     today: 0,
@@ -37,6 +44,12 @@ export default function Consultations() {
     loadConsultations()
     loadStats()
   }, [filters])
+
+  useEffect(() => {
+    if (mostrarExternos) {
+      loadAgendamentosExternos()
+    }
+  }, [mostrarExternos])
 
   const loadConsultations = async () => {
     try {
@@ -65,6 +78,23 @@ export default function Consultations() {
         completed: 0,
         pending: 0
       })
+    }
+  }
+
+  const loadAgendamentosExternos = async () => {
+    try {
+      setLoadingExternos(true)
+      // Buscar TODOS os agendamentos (sem filtro de data ou status)
+      const data = await listarAgendamentosExternos({
+        limite: 100
+      })
+      console.log('📊 Agendamentos externos carregados:', data.length)
+      setAgendamentosExternos(data)
+    } catch (error) {
+      console.error('❌ Erro ao carregar agendamentos externos:', error)
+      showError('Erro ao carregar agendamentos externos')
+    } finally {
+      setLoadingExternos(false)
     }
   }
 
@@ -174,6 +204,140 @@ export default function Consultations() {
             <Clock className="w-8 h-8 text-gray-600" />
           </div>
         </div>
+      </div>
+
+      {/* Agendamentos Externos */}
+      <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <ExternalLink className="w-5 h-5 text-green-600" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-gray-900">Agendamentos do Sistema Externo</h3>
+              <p className="text-sm text-gray-600">
+                {(() => {
+                  const hoje = getLocalDateString()
+                  const futuros = agendamentosExternos.filter(a => a.data >= hoje)
+                  const disponiveis = agendamentosExternos.filter(a => a.data === hoje)
+                  return `${futuros.length} agendamento(s) • ${disponiveis.length} disponível(is) hoje`
+                })()}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMostrarExternos(!mostrarExternos)}
+            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+          >
+            {mostrarExternos ? 'Ocultar' : 'Ver Agendamentos'}
+          </button>
+        </div>
+
+        {mostrarExternos && (
+          <div className="mt-4 space-y-2">
+            {loadingExternos ? (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
+                <p className="text-gray-600 mt-2">Carregando...</p>
+              </div>
+            ) : agendamentosExternos.length === 0 ? (
+              <div className="text-center py-8 text-gray-500">
+                Nenhum agendamento encontrado no sistema externo
+              </div>
+            ) : (
+              <div className="grid gap-2">
+                {agendamentosExternos
+                  .filter((agendamento) => {
+                    // Filtrar apenas agendamentos de hoje ou futuros (fuso horário local)
+                    return isTodayOrFuture(agendamento.data)
+                  })
+                  .map((agendamento) => {
+                  const dataAgendamento = agendamento.data
+                  const isHoje = isToday(dataAgendamento)
+                  const isFuture = !isHoje && isTodayOrFuture(dataAgendamento)
+                  
+                  return (
+                    <div
+                      key={agendamento.id}
+                      className={`bg-white border rounded-lg p-4 transition-all ${
+                        isHoje 
+                          ? 'border-green-400 shadow-md' 
+                          : 'border-gray-200 opacity-60'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <span className={`font-semibold ${isHoje ? 'text-gray-900' : 'text-gray-500'}`}>
+                              {agendamento.nome}
+                            </span>
+                            <span className="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                              Externo
+                            </span>
+                            {isHoje && (
+                              <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs font-medium rounded-full">
+                                Hoje
+                              </span>
+                            )}
+                            {isFuture && (
+                              <span className="px-2 py-0.5 bg-orange-100 text-orange-700 text-xs font-medium rounded-full">
+                                Futuro
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1 text-sm text-gray-600 space-y-1">
+                            <div className="flex items-center gap-4">
+                              <span className={isHoje ? 'font-medium text-blue-600' : ''}>
+                                📅 {new Date(agendamento.data).toLocaleDateString('pt-BR')}
+                              </span>
+                              <span>🕐 {agendamento.horario}</span>
+                              {agendamento.telefone && <span>📞 {agendamento.telefone}</span>}
+                            </div>
+                            {agendamento.medico && (
+                              <div className="text-gray-500">
+                                👨‍⚕️ {agendamento.medico.nome}
+                                {agendamento.medico.especialidade && ` - ${agendamento.medico.especialidade}`}
+                              </div>
+                            )}
+                            {agendamento.cidade && (
+                              <div className="text-gray-500">📍 {agendamento.cidade}</div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-4 flex flex-col gap-2 items-end">
+                          <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
+                            {agendamento.status}
+                          </span>
+                          {canStartConsultations && (
+                            <button
+                              disabled={!isHoje}
+                              onClick={() => {
+                                // TODO: Implementar iniciar consulta do agendamento externo
+                                alert('Funcionalidade de iniciar consulta será implementada')
+                              }}
+                              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isHoje
+                                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
+                                  : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                              }`}
+                              title={
+                                isHoje 
+                                  ? 'Iniciar consulta' 
+                                  : 'Disponível apenas no dia do agendamento'
+                              }
+                            >
+                              {isHoje ? 'Iniciar Consulta' : 'Indisponível'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Filters */}

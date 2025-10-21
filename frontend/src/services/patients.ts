@@ -306,7 +306,8 @@ export class PatientService {
   static validatePatientData(data: Partial<CreatePatientData | UpdatePatientData>): string[] {
     const errors: string[] = []
     
-    if ('cpf' in data && data.cpf) {
+    // CPF é opcional, mas se fornecido deve ser válido
+    if ('cpf' in data && data.cpf && data.cpf.trim() !== '') {
       if (!this.validateCPF(data.cpf)) {
         errors.push('CPF inválido')
       }
