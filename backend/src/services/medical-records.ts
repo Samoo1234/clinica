@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase'
+import { supabaseAdmin } from '../config/supabase'
 import { 
   MedicalRecord, 
   CreateMedicalRecordData, 
@@ -26,7 +26,7 @@ export class MedicalRecordsService {
       ...data.physical_exam
     }
 
-    const { data: record, error } = await supabase
+    const { data: record, error } = await supabaseAdmin
       .from('medical_records')
       .insert({
         ...data,
@@ -45,7 +45,7 @@ export class MedicalRecordsService {
 
   // Get medical record by ID
   async getMedicalRecordById(id: string): Promise<MedicalRecord | null> {
-    const { data: record, error } = await supabase
+    const { data: record, error } = await supabaseAdmin
       .from('medical_records')
       .select(`
         *,
@@ -77,13 +77,13 @@ export class MedicalRecordsService {
     const { limit = 50, offset = 0, orderBy = 'desc' } = options
 
     // Get total count
-    const { count } = await supabase
+    const { count } = await supabaseAdmin
       .from('medical_records')
       .select('*', { count: 'exact', head: true })
       .eq('patient_id', patientId)
 
     // Get records with pagination and ordering
-    const { data: records, error } = await supabase
+    const { data: records, error } = await supabaseAdmin
       .from('medical_records')
       .select(`
         *,
@@ -116,7 +116,7 @@ export class MedicalRecordsService {
   ): Promise<{ records: MedicalRecord[], total: number }> {
     const { limit = 50, offset = 0, startDate, endDate } = options
 
-    let query = supabase
+    let query = supabaseAdmin
       .from('medical_records')
       .select(`
         *,
@@ -149,7 +149,7 @@ export class MedicalRecordsService {
 
   // Update medical record
   async updateMedicalRecord(id: string, data: UpdateMedicalRecordData): Promise<MedicalRecord> {
-    const { data: record, error } = await supabase
+    const { data: record, error } = await supabaseAdmin
       .from('medical_records')
       .update(data)
       .eq('id', id)
@@ -165,7 +165,7 @@ export class MedicalRecordsService {
 
   // Delete medical record
   async deleteMedicalRecord(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('medical_records')
       .delete()
       .eq('id', id)
@@ -188,7 +188,7 @@ export class MedicalRecordsService {
     const filePath = `medical-records/${uniqueFilename}`
 
     // Upload file to Supabase Storage
-    const { data: uploadData, error: uploadError } = await supabase.storage
+    const { data: uploadData, error: uploadError } = await supabaseAdmin.storage
       .from('attachments')
       .upload(filePath, file, {
         contentType: mimeType,
@@ -208,7 +208,7 @@ export class MedicalRecordsService {
       file_size: file.length
     }
 
-    const { data: attachment, error: dbError } = await supabase
+    const { data: attachment, error: dbError } = await supabaseAdmin
       .from('attachments')
       .insert(attachmentData)
       .select()
@@ -216,7 +216,7 @@ export class MedicalRecordsService {
 
     if (dbError) {
       // Clean up uploaded file if database insert fails
-      await supabase.storage
+      await supabaseAdmin.storage
         .from('attachments')
         .remove([uploadData.path])
       
@@ -228,7 +228,7 @@ export class MedicalRecordsService {
 
   // Get attachments for a medical record
   async getAttachmentsByRecordId(recordId: string): Promise<Attachment[]> {
-    const { data: attachments, error } = await supabase
+    const { data: attachments, error } = await supabaseAdmin
       .from('attachments')
       .select('*')
       .eq('record_id', recordId)
@@ -243,7 +243,7 @@ export class MedicalRecordsService {
 
   // Get attachment download URL
   async getAttachmentUrl(filePath: string): Promise<string> {
-    const { data, error } = await supabase.storage
+    const { data, error } = await supabaseAdmin.storage
       .from('attachments')
       .createSignedUrl(filePath, 3600) // 1 hour expiry
 
@@ -257,7 +257,7 @@ export class MedicalRecordsService {
   // Delete attachment
   async deleteAttachment(attachmentId: string): Promise<void> {
     // Get attachment info first
-    const { data: attachment, error: getError } = await supabase
+    const { data: attachment, error: getError } = await supabaseAdmin
       .from('attachments')
       .select('file_path')
       .eq('id', attachmentId)
@@ -268,7 +268,7 @@ export class MedicalRecordsService {
     }
 
     // Delete from storage
-    const { error: storageError } = await supabase.storage
+    const { error: storageError } = await supabaseAdmin.storage
       .from('attachments')
       .remove([attachment.file_path])
 
@@ -277,7 +277,7 @@ export class MedicalRecordsService {
     }
 
     // Delete from database
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseAdmin
       .from('attachments')
       .delete()
       .eq('id', attachmentId)
@@ -299,7 +299,7 @@ export class MedicalRecordsService {
   ): Promise<{ records: MedicalRecord[], total: number }> {
     const { patientId, doctorId, limit = 50, offset = 0 } = options
 
-    let supabaseQuery = supabase
+    let supabaseQuery = supabaseAdmin
       .from('medical_records')
       .select(`
         *,
@@ -344,13 +344,13 @@ export class MedicalRecordsService {
     commonDiagnoses: Array<{ diagnosis: string, count: number }>
   }> {
     // Get total records count
-    const { count: totalRecords } = await supabase
+    const { count: totalRecords } = await supabaseAdmin
       .from('medical_records')
       .select('*', { count: 'exact', head: true })
       .eq('patient_id', patientId)
 
     // Get last consultation date
-    const { data: lastRecord } = await supabase
+    const { data: lastRecord } = await supabaseAdmin
       .from('medical_records')
       .select('consultation_date')
       .eq('patient_id', patientId)
@@ -359,7 +359,7 @@ export class MedicalRecordsService {
       .single()
 
     // Get common diagnoses (simplified - in production you might want to use a more sophisticated approach)
-    const { data: records } = await supabase
+    const { data: records } = await supabaseAdmin
       .from('medical_records')
       .select('diagnosis')
       .eq('patient_id', patientId)

@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase'
+import { supabaseAdmin } from '../config/supabase'
 import { 
   ExternalPartner, 
   CreateExternalPartnerData, 
@@ -20,7 +20,7 @@ export class ExternalIntegrationService {
     const apiKey = crypto.randomBytes(32).toString('hex')
     const apiSecret = crypto.randomBytes(64).toString('hex')
 
-    const { data: partner, error } = await supabase
+    const { data: partner, error } = await supabaseAdmin
       .from('external_partners')
       .insert({
         ...data,
@@ -39,7 +39,7 @@ export class ExternalIntegrationService {
   }
 
   async getPartners(): Promise<ExternalPartner[]> {
-    const { data: partners, error } = await supabase
+    const { data: partners, error } = await supabaseAdmin
       .from('external_partners')
       .select('*')
       .order('created_at', { ascending: false })
@@ -52,7 +52,7 @@ export class ExternalIntegrationService {
   }
 
   async getPartnerById(id: string): Promise<ExternalPartner | null> {
-    const { data: partner, error } = await supabase
+    const { data: partner, error } = await supabaseAdmin
       .from('external_partners')
       .select('*')
       .eq('id', id)
@@ -67,7 +67,7 @@ export class ExternalIntegrationService {
   }
 
   async getPartnerByApiKey(apiKey: string): Promise<ExternalPartner | null> {
-    const { data: partner, error } = await supabase
+    const { data: partner, error } = await supabaseAdmin
       .from('external_partners')
       .select('*')
       .eq('api_key', apiKey)
@@ -83,7 +83,7 @@ export class ExternalIntegrationService {
   }
 
   async updatePartner(id: string, data: UpdateExternalPartnerData): Promise<ExternalPartner> {
-    const { data: partner, error } = await supabase
+    const { data: partner, error } = await supabaseAdmin
       .from('external_partners')
       .update(data)
       .eq('id', id)
@@ -98,7 +98,7 @@ export class ExternalIntegrationService {
   }
 
   async deletePartner(id: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('external_partners')
       .delete()
       .eq('id', id)
@@ -137,7 +137,7 @@ export class ExternalIntegrationService {
       throw new Error('Partner does not have permission to access patient data')
     }
 
-    const { data: patient, error } = await supabase
+    const { data: patient, error } = await supabaseAdmin
       .from('patients')
       .select('*')
       .eq('id', patientId)
@@ -158,7 +158,7 @@ export class ExternalIntegrationService {
       throw new Error('Partner does not have permission to search patients')
     }
 
-    const { data: patient, error } = await supabase
+    const { data: patient, error } = await supabaseAdmin
       .from('patients')
       .select('*')
       .eq('cpf', cpf)
@@ -180,7 +180,7 @@ export class ExternalIntegrationService {
       throw new Error('Partner does not have permission to receive prescriptions')
     }
 
-    const { data: share, error } = await supabase
+    const { data: share, error } = await supabaseAdmin
       .from('prescription_shares')
       .insert(data)
       .select()
@@ -203,7 +203,7 @@ export class ExternalIntegrationService {
   }
 
   async getPrescriptionShares(partnerId: string): Promise<PrescriptionShare[]> {
-    const { data: shares, error } = await supabase
+    const { data: shares, error } = await supabaseAdmin
       .from('prescription_shares')
       .select('*')
       .eq('partner_id', partnerId)
@@ -221,7 +221,7 @@ export class ExternalIntegrationService {
     dispensedBy: string, 
     notes?: string
   ): Promise<PrescriptionShare> {
-    const { data: share, error } = await supabase
+    const { data: share, error } = await supabaseAdmin
       .from('prescription_shares')
       .update({
         status: 'dispensed',
@@ -242,7 +242,7 @@ export class ExternalIntegrationService {
 
   // Access logging
   async logPartnerAccess(data: CreatePartnerAccessLogData): Promise<PartnerAccessLog> {
-    const { data: log, error } = await supabase
+    const { data: log, error } = await supabaseAdmin
       .from('partner_access_logs')
       .insert(data)
       .select()
@@ -259,7 +259,7 @@ export class ExternalIntegrationService {
     partnerId: string, 
     limit: number = 100
   ): Promise<PartnerAccessLog[]> {
-    const { data: logs, error } = await supabase
+    const { data: logs, error } = await supabaseAdmin
       .from('partner_access_logs')
       .select('*')
       .eq('partner_id', partnerId)
@@ -302,11 +302,11 @@ export class ExternalIntegrationService {
     prescriptionsDispensed: number
   }> {
     const [accessLogs, prescriptionShares] = await Promise.all([
-      supabase
+      supabaseAdmin
         .from('partner_access_logs')
         .select('success')
         .eq('partner_id', partnerId),
-      supabase
+      supabaseAdmin
         .from('prescription_shares')
         .select('status')
         .eq('partner_id', partnerId)
@@ -317,10 +317,10 @@ export class ExternalIntegrationService {
 
     return {
       totalRequests: logs.length,
-      successfulRequests: logs.filter(log => log.success).length,
-      failedRequests: logs.filter(log => !log.success).length,
+      successfulRequests: logs.filter((log: any) => log.success).length,
+      failedRequests: logs.filter((log: any) => !log.success).length,
       prescriptionsShared: shares.length,
-      prescriptionsDispensed: shares.filter(share => share.status === 'dispensed').length
+      prescriptionsDispensed: shares.filter((share: any) => share.status === 'dispensed').length
     }
   }
 }

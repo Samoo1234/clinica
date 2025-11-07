@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import axios, { AxiosResponse } from 'axios';
 
 // Interfaces para dados da NFS-e
@@ -69,7 +69,7 @@ export class NFSeService {
       return this.config;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('nfse_config')
       .select('*')
       .eq('active', true)
@@ -151,7 +151,7 @@ export class NFSeService {
 
   // Calcular impostos
   private async calculateTaxes(amount: number): Promise<{ tax_amount: number; net_amount: number }> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .rpc('calculate_invoice_taxes', { gross_amount: amount });
 
     if (error || !data || data.length === 0) {
@@ -166,7 +166,7 @@ export class NFSeService {
 
   // Criar registro da invoice no banco
   private async createInvoiceRecord(invoiceData: Partial<Invoice>): Promise<Invoice> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('invoices')
       .insert([invoiceData])
       .select()
@@ -258,7 +258,7 @@ export class NFSeService {
 
   // Atualizar invoice com sucesso
   private async updateInvoiceSuccess(invoiceId: string, response: NFSeResponse): Promise<Invoice> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('invoices')
       .update({
         nfse_number: response.nfse_number,
@@ -282,7 +282,7 @@ export class NFSeService {
 
   // Atualizar invoice com erro
   private async updateInvoiceError(invoiceId: string, errorMessage: string): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('invoices')
       .update({
         status: 'error',
@@ -305,7 +305,7 @@ export class NFSeService {
     status: 'success' | 'error',
     errorMessage?: string
   ): Promise<void> {
-    const { error } = await supabase
+    const { error } = await supabaseAdmin
       .from('nfse_integration_logs')
       .insert([{
         invoice_id: invoiceId,
@@ -323,7 +323,7 @@ export class NFSeService {
 
   // Buscar invoice por ID
   async getInvoice(invoiceId: string): Promise<Invoice | null> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('invoices')
       .select('*')
       .eq('id', invoiceId)
@@ -338,7 +338,7 @@ export class NFSeService {
 
   // Buscar invoices por appointment
   async getInvoicesByAppointment(appointmentId: string): Promise<Invoice[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('invoices')
       .select('*')
       .eq('appointment_id', appointmentId)
@@ -359,7 +359,7 @@ export class NFSeService {
     limit?: number;
     offset?: number;
   } = {}): Promise<{ invoices: Invoice[]; total: number }> {
-    let query = supabase
+    let query = supabaseAdmin
       .from('invoices')
       .select('*', { count: 'exact' });
 
@@ -423,7 +423,7 @@ export class NFSeService {
 
       if (response.data.sucesso) {
         // Atualizar status no banco
-        const { data, error } = await supabase
+        const { data, error } = await supabaseAdmin
           .from('invoices')
           .update({ status: 'cancelled' })
           .eq('id', invoiceId)
@@ -464,7 +464,7 @@ export class NFSeService {
     }
 
     // Buscar dados do appointment para recriar a requisição
-    const { data: appointmentData, error: appointmentError } = await supabase
+    const { data: appointmentData, error: appointmentError } = await supabaseAdmin
       .from('appointments')
       .select(`
         *,
@@ -495,7 +495,7 @@ export class NFSeService {
     };
 
     // Resetar status para processing
-    await supabase
+    await supabaseAdmin
       .from('invoices')
       .update({ status: 'processing', error_message: null })
       .eq('id', invoiceId);
@@ -536,7 +536,7 @@ export class NFSeService {
 
   // Atualizar configuração
   async updateConfig(configData: Partial<NFSeConfig>): Promise<NFSeConfig> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('nfse_config')
       .update(configData)
       .eq('active', true)

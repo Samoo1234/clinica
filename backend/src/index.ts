@@ -33,7 +33,11 @@ app.use(cors({
   origin: [
     'http://localhost:3000',
     'http://localhost:3003',
-    env.FRONTEND_URL
+    env.FRONTEND_URL,
+    // URLs da Vercel
+    'https://visioncare-2025-ukmk.vercel.app',
+    'https://visioncare-2025-myuw4te0-samoel-duartes-projects.vercel.app',
+    /\.vercel\.app$/ // Permite qualquer subdomínio .vercel.app
   ].filter(Boolean),
   credentials: true
 }))

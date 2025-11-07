@@ -1,6 +1,7 @@
 import express from 'express'
 import { PatientService } from '../services/patients'
 import { authMiddleware } from '../middleware/auth'
+import { searchLimiter } from '../middleware/rate-limit'
 import type { CreatePatientData, UpdatePatientData } from '../types/database'
 
 const router = express.Router()
@@ -12,7 +13,7 @@ router.use(authMiddleware)
  * GET /api/patients
  * Get all patients with pagination and optional search
  */
-router.get('/', async (req, res) => {
+router.get('/', searchLimiter, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20
@@ -43,7 +44,7 @@ router.get('/', async (req, res) => {
  * GET /api/patients/search
  * Search patients with full-text search
  */
-router.get('/search', async (req, res) => {
+router.get('/search', searchLimiter, async (req, res) => {
   try {
     const page = parseInt(req.query.page as string) || 1
     const limit = parseInt(req.query.limit as string) || 20

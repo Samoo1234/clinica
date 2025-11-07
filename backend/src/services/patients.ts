@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '../config/supabase'
 import { handleSupabaseError } from '../utils/supabase-helpers'
+import { withCache, cache } from '../utils/cache'
 import type { 
   Patient, 
   CreatePatientData, 
@@ -199,47 +200,53 @@ export class PatientService {
       const offset = (page - 1) * limit
       const { query } = options
       
-      let countQuery = supabaseAdmin.from('patients').select('*', { count: 'exact', head: true })
-      let dataQuery = supabaseAdmin.from('patients').select('*')
+      // Create cache key based on search parameters
+      const cacheKey = `patients:search:${query || 'all'}:${page}:${limit}`
       
-      if (query && query.trim()) {
-        const searchTerm = query.trim()
-        // Use full-text search for name and simple pattern matching for CPF/phone
-        const searchFilter = `name.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
-        countQuery = countQuery.or(searchFilter)
-        dataQuery = dataQuery.or(searchFilter)
-      }
-      
-      // Get total count
-      const { count, error: countError } = await countQuery
-      
-      if (countError) {
-        handleSupabaseError(countError, 'count search results')
-      }
-      
-      // Get paginated data
-      const { data, error } = await dataQuery
-        .order('name')
-        .range(offset, offset + limit - 1)
-      
-      if (error) {
-        handleSupabaseError(error, 'search patients')
-      }
-      
-      const total = count || 0
-      const totalPages = Math.ceil(total / limit)
-      
-      return {
-        data: data || [],
-        pagination: {
-          page,
-          limit,
-          total,
-          totalPages,
-          hasNext: page < totalPages,
-          hasPrev: page > 1
+      // Try to get from cache first (30 seconds TTL)
+      return await withCache(cacheKey, async () => {
+        let countQuery = supabaseAdmin.from('patients').select('*', { count: 'exact', head: true })
+        let dataQuery = supabaseAdmin.from('patients').select('*')
+        
+        if (query && query.trim()) {
+          const searchTerm = query.trim()
+          // Use full-text search for name and simple pattern matching for CPF/phone
+          const searchFilter = `name.ilike.%${searchTerm}%,cpf.ilike.%${searchTerm}%,phone.ilike.%${searchTerm}%`
+          countQuery = countQuery.or(searchFilter)
+          dataQuery = dataQuery.or(searchFilter)
         }
-      }
+        
+        // Get total count
+        const { count, error: countError } = await countQuery
+        
+        if (countError) {
+          handleSupabaseError(countError, 'count search results')
+        }
+        
+        // Get paginated data
+        const { data, error } = await dataQuery
+          .order('name')
+          .range(offset, offset + limit - 1)
+        
+        if (error) {
+          handleSupabaseError(error, 'search patients')
+        }
+        
+        const total = count || 0
+        const totalPages = Math.ceil(total / limit)
+        
+        return {
+          data: data || [],
+          pagination: {
+            page,
+            limit,
+            total,
+            totalPages,
+            hasNext: page < totalPages,
+            hasPrev: page > 1
+          }
+        }
+      }, 30) // 30 seconds cache
     } catch (error) {
       handleSupabaseError(error, 'search patients')
       throw error

@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase';
+import { supabaseAdmin } from '../config/supabase';
 import { Database } from '../types/database';
 
 type DigitalSignature = Database['public']['Tables']['digital_signatures']['Row'];
@@ -139,7 +139,7 @@ class DigitalSignatureService {
         expires_at: providerResponse.expiresAt.toISOString()
       };
 
-      const { data, error } = await supabase
+      const { data, error } = await supabaseAdmin
         .from('digital_signatures')
         .insert(signatureData)
         .select()
@@ -169,7 +169,7 @@ class DigitalSignatureService {
   }
 
   async getSignatureStatus(signatureId: string): Promise<DigitalSignature> {
-    const { data: signature, error } = await supabase
+    const { data: signature, error } = await supabaseAdmin
       .from('digital_signatures')
       .select('*')
       .eq('id', signatureId)
@@ -193,7 +193,7 @@ class DigitalSignatureService {
             signed_at: providerStatus.signedAt?.toISOString()
           };
 
-          const { data: updatedSignature, error: updateError } = await supabase
+          const { data: updatedSignature, error: updateError } = await supabaseAdmin
             .from('digital_signatures')
             .update(updateData)
             .eq('id', signatureId)
@@ -254,7 +254,7 @@ class DigitalSignatureService {
   }
 
   async getSignaturesByRecord(recordId: string): Promise<DigitalSignature[]> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('digital_signatures')
       .select('*')
       .eq('record_id', recordId)
@@ -268,7 +268,7 @@ class DigitalSignatureService {
   }
 
   async cancelSignature(signatureId: string): Promise<DigitalSignature> {
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('digital_signatures')
       .update({
         status: 'cancelled'
@@ -295,7 +295,7 @@ class DigitalSignatureService {
     errorMessage?: string
   ): Promise<void> {
     try {
-      await supabase
+      await supabaseAdmin
         .from('integration_logs')
         .insert({
           service_name: 'digital_signature',
