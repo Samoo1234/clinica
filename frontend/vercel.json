@@ -1,0 +1,9 @@
+{
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "env": {
+    "VITE_API_URL": "https://visioncare-2025-myuw4te0-samoel-duartes-projects.vercel.app/api"
+  }
+}
+
