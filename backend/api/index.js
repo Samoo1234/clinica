@@ -1,8 +1,18 @@
 // Vercel Serverless Function Entry Point
-// Este arquivo faz o Express funcionar na Vercel
+const express = require('express');
 
-const app = require('../dist/index.js').default;
+// Importa o app Express
+let app;
+try {
+  app = require('../dist/index.js').default || require('../dist/index.js');
+} catch (error) {
+  console.error('Erro ao carregar app:', error);
+  app = express();
+  app.all('*', (req, res) => {
+    res.status(500).json({ error: 'Failed to load application', details: error.message });
+  });
+}
 
-// Export como serverless function para Vercel
+// Export para Vercel
 module.exports = app;
 
