@@ -22,7 +22,7 @@ class ConsultationsService {
       if (filters.dateFrom) params.append('dateFrom', filters.dateFrom)
       if (filters.dateTo) params.append('dateTo', filters.dateTo)
 
-      const response = await api.get(`/consultations?${params.toString()}`) as { data: Consultation[] }
+      const response = await api.get(`/api/consultations?${params.toString()}`) as { data: Consultation[] }
       return response.data || []
     } catch (error) {
       // Return empty array if API fails
@@ -34,7 +34,7 @@ class ConsultationsService {
    * Get consultation by ID
    */
   async getConsultation(id: string): Promise<Consultation> {
-    const response = await api.get(`/consultations/${id}`) as { data: { consultation: Consultation } }
+    const response = await api.get(`/api/consultations/${id}`) as { data: { consultation: Consultation } }
     return response.data.consultation
   }
 
@@ -71,7 +71,7 @@ class ConsultationsService {
    * Update consultation data
    */
   async updateConsultation(id: string, data: UpdateConsultationData): Promise<Consultation> {
-    const response = await api.put(`/consultations/${id}`, data) as { data: { consultation: Consultation } }
+    const response = await api.put(`/api/consultations/${id}`, data) as { data: { consultation: Consultation } }
     return response.data.consultation
   }
 
@@ -79,14 +79,14 @@ class ConsultationsService {
    * Complete a consultation and create medical record
    */
   async completeConsultation(id: string, data: CompleteConsultationData): Promise<void> {
-    await api.post(`/consultations/${id}/complete`, data)
+    await api.post(`/api/consultations/${id}/complete`, data)
   }
 
   /**
    * Cancel a consultation
    */
   async cancelConsultation(id: string, reason?: string): Promise<void> {
-    await api.post(`/consultations/${id}/cancel`, { reason })
+    await api.post(`/api/consultations/${id}/cancel`, { reason })
   }
 
   /**
@@ -101,7 +101,7 @@ class ConsultationsService {
    * Get consultation history for a patient
    */
   async getPatientConsultations(patientId: string): Promise<Consultation[]> {
-    const response = await api.get(`/consultations/patient/${patientId}`) as { data: { consultations: Consultation[] } }
+    const response = await api.get(`/api/consultations/patient/${patientId}`) as { data: { consultations: Consultation[] } }
     return response.data.consultations
   }
 
@@ -109,7 +109,7 @@ class ConsultationsService {
    * Get consultation history for a doctor
    */
   async getDoctorConsultations(doctorId: string): Promise<Consultation[]> {
-    const response = await api.get(`/consultations/doctor/${doctorId}`) as { data: { consultations: Consultation[] } }
+    const response = await api.get(`/api/consultations/doctor/${doctorId}`) as { data: { consultations: Consultation[] } }
     return response.data.consultations
   }
 
@@ -117,7 +117,7 @@ class ConsultationsService {
    * Update vital signs during consultation
    */
   async updateVitalSigns(id: string, vitalSigns: Consultation['vitalSigns']): Promise<Consultation> {
-    const response = await api.put(`/consultations/${id}/vital-signs`, { vitalSigns }) as { data: { consultation: Consultation } }
+    const response = await api.put(`/api/consultations/${id}/vital-signs`, { vitalSigns }) as { data: { consultation: Consultation } }
     return response.data.consultation
   }
 
@@ -125,7 +125,7 @@ class ConsultationsService {
    * Add notes to consultation
    */
   async addNotes(id: string, notes: string): Promise<Consultation> {
-    const response = await api.put(`/consultations/${id}/notes`, { notes }) as { data: { consultation: Consultation } }
+    const response = await api.put(`/api/consultations/${id}/notes`, { notes }) as { data: { consultation: Consultation } }
     return response.data.consultation
   }
 }
