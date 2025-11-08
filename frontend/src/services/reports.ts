@@ -74,7 +74,7 @@ export interface Doctor {
 class ReportsService {
   // Get dashboard KPIs
   async getDashboardKPIs(): Promise<DashboardKPIs> {
-    const response = await api.get<DashboardKPIs>('/reports/dashboard/kpis')
+    const response = await api.get<DashboardKPIs>('/api/reports/dashboard/kpis')
     return response
   }
 
@@ -86,7 +86,7 @@ class ReportsService {
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
     if (filters.status) params.append('status', filters.status)
 
-    const response = await api.get<AppointmentReportData[]>(`/reports/appointments?${params.toString()}`)
+    const response = await api.get<AppointmentReportData[]>(`/api/reports/appointments?${params.toString()}`)
     return response
   }
 
@@ -97,7 +97,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.groupBy) params.append('groupBy', filters.groupBy)
 
-    const response = await api.get<FinancialReportData[]>(`/reports/financial?${params.toString()}`)
+    const response = await api.get<FinancialReportData[]>(`/api/reports/financial?${params.toString()}`)
     return response
   }
 
@@ -108,7 +108,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
 
-    const response = await api.get<DoctorPerformanceData[]>(`/reports/doctors/performance?${params.toString()}`)
+    const response = await api.get<DoctorPerformanceData[]>(`/api/reports/doctors/performance?${params.toString()}`)
     return response
   }
 
@@ -118,7 +118,7 @@ class ReportsService {
     if (filters.startDate) params.append('startDate', filters.startDate)
     if (filters.endDate) params.append('endDate', filters.endDate)
 
-    const response = await api.get<ConsultationTypeData[]>(`/reports/consultations/types?${params.toString()}`)
+    const response = await api.get<ConsultationTypeData[]>(`/api/reports/consultations/types?${params.toString()}`)
     return response
   }
 
@@ -129,7 +129,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
 
-    const response = await api.get<any>(`/reports/stats/appointments?${params.toString()}`)
+    const response = await api.get<any>(`/api/reports/stats/appointments?${params.toString()}`)
     return response
   }
 
@@ -139,19 +139,19 @@ class ReportsService {
     if (filters.startDate) params.append('startDate', filters.startDate)
     if (filters.endDate) params.append('endDate', filters.endDate)
 
-    const response = await api.get<any>(`/reports/stats/financial?${params.toString()}`)
+    const response = await api.get<any>(`/api/reports/stats/financial?${params.toString()}`)
     return response
   }
 
   // Get monthly KPIs
   async getMonthlyKPIs(limit: number = 12) {
-    const response = await api.get<any>(`/reports/stats/monthly?limit=${limit}`)
+    const response = await api.get<any>(`/api/reports/stats/monthly?limit=${limit}`)
     return response
   }
 
   // Get available doctors
   async getDoctors(): Promise<Doctor[]> {
-    const response = await api.get<Doctor[]>('/reports/doctors')
+    const response = await api.get<Doctor[]>('/api/reports/doctors')
     return response
   }
 
@@ -163,7 +163,7 @@ class ReportsService {
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
     if (filters.status) params.append('status', filters.status)
 
-    const response = await api.get<Blob>(`/reports/appointments/export?${params.toString()}`, {
+    const response = await api.get<Blob>(`/api/reports/appointments/export?${params.toString()}`, {
       responseType: 'blob'
     })
 
@@ -185,7 +185,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.groupBy) params.append('groupBy', filters.groupBy)
 
-    const response = await api.get<Blob>(`/reports/financial/export?${params.toString()}`, {
+    const response = await api.get<Blob>(`/api/reports/financial/export?${params.toString()}`, {
       responseType: 'blob'
     })
 
@@ -207,7 +207,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
 
-    const response = await api.get<Blob>(`/reports/doctors/performance/export?${params.toString()}`, {
+    const response = await api.get<Blob>(`/api/reports/doctors/performance/export?${params.toString()}`, {
       responseType: 'blob'
     })
 
@@ -229,7 +229,7 @@ class ReportsService {
     if (filters.endDate) params.append('endDate', filters.endDate)
     if (filters.doctorId) params.append('doctorId', filters.doctorId)
 
-    const response = await api.get<any>(`/reports/summary?${params.toString()}`)
+    const response = await api.get<any>(`/api/reports/summary?${params.toString()}`)
     return response
   }
 }
