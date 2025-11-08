@@ -226,11 +226,17 @@ app.use('*', (req, res) => {
   res.status(404).json({ error: 'Route not found' })
 })
 
-app.listen(PORT, () => {
-  console.log(`🚀 VisionCare API running on port ${PORT}`)
-  console.log(`📊 Health check: http://localhost:${PORT}/health`)
-  console.log(`🔗 API docs: http://localhost:${PORT}/api`)
-  
-  // Start notification scheduler
-  notificationScheduler.start()
-})
+// Para desenvolvimento local
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`🚀 VisionCare API running on port ${PORT}`)
+    console.log(`📊 Health check: http://localhost:${PORT}/health`)
+    console.log(`🔗 API docs: http://localhost:${PORT}/api`)
+    
+    // Start notification scheduler
+    notificationScheduler.start()
+  })
+}
+
+// Export para Vercel
+export default app

@@ -23,7 +23,7 @@ Tente abrir no navegador: `https://visioncare-2025-myuw4te0-samoel-duartes-proje
 3. Settings → Environment Variables → Add New
 4. Coloque:
    - **Nome:** `VITE_API_URL`
-   - **Valor:** `https://visioncare-2025-myuw4te0-samoel-duartes-projects.vercel.app/api`
+   - **Valor:** `https://visioncare-2025-32zd4uyu0-samoel-duartes-projects.vercel.app/api`
    
    ⚠️ Use a URL que funcionou no passo 1 + `/api` no final
 

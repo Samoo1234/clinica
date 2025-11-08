@@ -153,3 +153,4 @@ mas as variáveis DEVEM estar no painel da Vercel para funcionar!
 
 **⚡ Execute o Passo 1 AGORA e depois siga os demais passos!**
 
+
