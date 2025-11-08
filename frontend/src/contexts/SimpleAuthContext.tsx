@@ -41,7 +41,11 @@ const mockUser: AuthUser = {
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<AuthUser | null>(null) // Start not logged in
+  const [user, setUser] = useState<AuthUser | null>(() => {
+    // Initialize user from localStorage
+    const savedUser = localStorage.getItem('user')
+    return savedUser ? JSON.parse(savedUser) : null
+  })
   const [token, setToken] = useState<string | null>(() => {
     // Initialize token from localStorage
     return localStorage.getItem('token')
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       setUser(mockUser)
       setToken(mockToken)
       localStorage.setItem('token', mockToken) // Save token to localStorage
+      localStorage.setItem('user', JSON.stringify(mockUser)) // Save user to localStorage
       setLoading(false)
       return {}
     } else {
@@ -80,6 +85,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setUser(null)
     setToken(null)
     localStorage.removeItem('token') // Remove token from localStorage
+    localStorage.removeItem('user') // Remove user from localStorage
   }
 
   const value: AuthContextType = {
