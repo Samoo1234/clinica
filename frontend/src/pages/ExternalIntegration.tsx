@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { Link as LinkIcon, Settings, Activity, AlertCircle } from 'lucide-react'
+import { Link as LinkIcon, Settings, Activity, AlertCircle, X, Plus } from 'lucide-react'
 import { ModuleGuard } from '../components/ModuleGuard'
 
 export default function ExternalIntegration() {
-  const [integrations] = useState([
+  const [showModal, setShowModal] = useState(false)
+  const [integrations, setIntegrations] = useState([
     {
       id: 1,
       name: 'Sistema de Laboratório',
@@ -72,8 +73,12 @@ export default function ExternalIntegration() {
           </div>
           
           <div className="mt-6 pt-6 border-t border-gray-200">
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              Adicionar Nova Integração
+            <button 
+              onClick={() => setShowModal(true)}
+              className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Adicionar Nova Integração</span>
             </button>
           </div>
         </div>
@@ -93,6 +98,113 @@ export default function ExternalIntegration() {
           </div>
         </div>
       </div>
+
+      {/* Modal Nova Integração */}
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-900">Nova Integração</h3>
+              <button
+                onClick={() => setShowModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault()
+                const formData = new FormData(e.currentTarget)
+                const newIntegration = {
+                  id: integrations.length + 1,
+                  name: formData.get('name') as string,
+                  status: 'disconnected' as const,
+                  lastSync: 'Nunca sincronizado',
+                  type: formData.get('type') as string
+                }
+                setIntegrations([...integrations, newIntegration])
+                setShowModal(false)
+              }}
+              className="p-6 space-y-4"
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Nome da Integração *
+                </label>
+                <input
+                  type="text"
+                  name="name"
+                  required
+                  placeholder="Ex: Sistema de Laboratório ABC"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Tipo de Integração *
+                </label>
+                <select
+                  name="type"
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value="">Selecione...</option>
+                  <option value="laboratory">Sistema de Laboratório</option>
+                  <option value="insurance">Plano de Saúde</option>
+                  <option value="pharmacy">Farmácia</option>
+                  <option value="hospital">Hospital/Clínica</option>
+                  <option value="billing">Sistema de Faturamento</option>
+                  <option value="telemedicine">Telemedicina</option>
+                  <option value="other">Outro</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  URL da API (opcional)
+                </label>
+                <input
+                  type="url"
+                  name="apiUrl"
+                  placeholder="https://api.exemplo.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Descrição (opcional)
+                </label>
+                <textarea
+                  name="description"
+                  rows={3}
+                  placeholder="Descreva o propósito desta integração..."
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                />
+              </div>
+
+              <div className="flex items-center space-x-3 pt-4 border-t border-gray-200">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                >
+                  Adicionar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
       </div>
     </ModuleGuard>
   )
