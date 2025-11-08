@@ -34,7 +34,7 @@ export interface ApiResponse<T> {
 }
 
 export class PatientService {
-  private static readonly API_BASE = 'http://localhost:3001/api/patients'
+  private static readonly API_BASE = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/patients`
 
   /**
    * Validate CPF format and check digit
