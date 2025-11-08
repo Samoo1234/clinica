@@ -43,7 +43,7 @@ class ConsultationsService {
    */
   async getConsultationStats(): Promise<ConsultationStats> {
     try {
-      const response = await api.get('/consultations/stats') as { data: ConsultationStats }
+      const response = await api.get('/api/consultations/stats') as { data: ConsultationStats }
       return response.data
     } catch (error) {
       // Return default stats if API fails
