@@ -58,7 +58,7 @@ class NotificationService {
    * Get patient notification preferences
    */
   async getPatientNotificationPreferences(patientId: string): Promise<NotificationPreferences> {
-    const response = await api.get(`/notifications/preferences/patient/${patientId}`);
+    const response = await api.get(`/api/notifications/preferences/patient/${patientId}`);
     return (response as any).data.data;
   }
 
@@ -69,7 +69,7 @@ class NotificationService {
     patientId: string,
     preferences: Partial<NotificationPreferences>
   ): Promise<void> {
-    await api.put(`/notifications/preferences/patient/${patientId}`, preferences);
+    await api.put(`/api/notifications/preferences/patient/${patientId}`, preferences);
   }
 
   /**
@@ -86,7 +86,7 @@ class NotificationService {
     appointmentId?: string;
     patientId?: string;
   }): Promise<{ id: string }> {
-    const response = await api.post('/notifications/schedule', data);
+    const response = await api.post('/api/notifications/schedule', data);
     return (response as any).data.data;
   }
 
@@ -94,28 +94,28 @@ class NotificationService {
    * Send appointment confirmation
    */
   async sendAppointmentConfirmation(appointmentId: string): Promise<void> {
-    await api.post(`/notifications/appointment/${appointmentId}/confirmation`);
+    await api.post(`/api/notifications/appointment/${appointmentId}/confirmation`);
   }
 
   /**
    * Schedule appointment reminder
    */
   async scheduleAppointmentReminder(appointmentId: string): Promise<void> {
-    await api.post(`/notifications/appointment/${appointmentId}/reminder`);
+    await api.post(`/api/notifications/appointment/${appointmentId}/reminder`);
   }
 
   /**
    * Cancel appointment notifications
    */
   async cancelAppointmentNotifications(appointmentId: string): Promise<void> {
-    await api.delete(`/notifications/appointment/${appointmentId}`);
+    await api.delete(`/api/notifications/appointment/${appointmentId}`);
   }
 
   /**
    * Get notification templates
    */
   async getNotificationTemplates(): Promise<NotificationTemplate[]> {
-    const response = await api.get('/notifications/templates');
+    const response = await api.get('/api/notifications/templates');
     return (response as any).data.data;
   }
 
@@ -136,7 +136,7 @@ class NotificationService {
       }, {} as Record<string, string>)
     ).toString() : '';
     
-    const response = await api.get(`/notifications/history${queryString}`);
+    const response = await api.get(`/api/notifications/history${queryString}`);
     return (response as any).data;
   }
 
@@ -144,7 +144,7 @@ class NotificationService {
    * Process pending notifications (admin only)
    */
   async processPendingNotifications(): Promise<void> {
-    await api.post('/notifications/process-pending');
+    await api.post('/api/notifications/process-pending');
   }
 }
 

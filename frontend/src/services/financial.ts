@@ -92,7 +92,7 @@ export interface FinancialDashboard {
 }
 
 class FinancialService {
-  private baseUrl = '/api/financial';
+  private baseUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/financial`;
 
   // Payment management
   async createPayment(paymentData: Omit<Payment, 'id' | 'created_at' | 'updated_at'>): Promise<Payment> {

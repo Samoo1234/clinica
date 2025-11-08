@@ -76,7 +76,7 @@ export interface DataSubjectRequest {
 class SecurityService {
   // Security Metrics
   async getSecurityMetrics(): Promise<{ metrics: SecurityMetrics }> {
-    const response = await api.get('/security/security-metrics')
+    const response = await api.get('/api/security/security-metrics')
     return response as { metrics: SecurityMetrics }
   }
 
@@ -88,12 +88,12 @@ class SecurityService {
     limit?: number
     offset?: number
   } = {}): Promise<{ alerts: SecurityAlert[], total: number }> {
-    const response = await api.get('/security/security-alerts')
+    const response = await api.get('/api/security/security-alerts')
     return response as { alerts: SecurityAlert[], total: number }
   }
 
   async resolveAlert(alertId: string, resolutionNotes: string, status: 'RESOLVED' | 'FALSE_POSITIVE' = 'RESOLVED'): Promise<{ success: boolean }> {
-    const response = await api.post(`/security/security-alerts/${alertId}/resolve`, {
+    const response = await api.post(`/api/security/security-alerts/${alertId}/resolve`, {
       resolutionNotes,
       status
     })
@@ -101,7 +101,7 @@ class SecurityService {
   }
 
   async monitorSecurity(): Promise<{ alerts: SecurityAlert[], message: string }> {
-    const response = await api.post('/security/monitor-security')
+    const response = await api.post('/api/security/monitor-security')
     return response as { alerts: SecurityAlert[], message: string }
   }
 
@@ -116,7 +116,7 @@ class SecurityService {
     limit?: number
     offset?: number
   } = {}): Promise<{ logs: AuditLog[], total: number }> {
-    const response = await api.get('/security/audit-logs')
+    const response = await api.get('/api/security/audit-logs')
     return response as { logs: AuditLog[], total: number }
   }
 
@@ -128,12 +128,12 @@ class SecurityService {
     limit?: number
     offset?: number
   } = {}): Promise<{ requests: DataSubjectRequest[], total: number }> {
-    const response = await api.get('/security/data-subject-requests')
+    const response = await api.get('/api/security/data-subject-requests')
     return response as { requests: DataSubjectRequest[], total: number }
   }
 
   async handleAccessRequest(patientId: string, requestedBy: string): Promise<{ data: any, message: string }> {
-    const response = await api.post('/security/data-subject-requests/access', {
+    const response = await api.post('/api/security/data-subject-requests/access', {
       patientId,
       requestedBy
     })
@@ -141,7 +141,7 @@ class SecurityService {
   }
 
   async handleErasureRequest(patientId: string, requestedBy: string, justification?: string): Promise<{ success: boolean, message: string }> {
-    const response = await api.post('/security/data-subject-requests/erasure', {
+    const response = await api.post('/api/security/data-subject-requests/erasure', {
       patientId,
       requestedBy,
       justification
@@ -150,7 +150,7 @@ class SecurityService {
   }
 
   async applyRetentionPolicies(): Promise<{ processed: number, anonymized: number, deleted: number, message: string }> {
-    const response = await api.post('/security/apply-retention-policies')
+    const response = await api.post('/api/security/apply-retention-policies')
     return response as { processed: number, anonymized: number, deleted: number, message: string }
   }
 
@@ -161,7 +161,7 @@ class SecurityService {
     limit?: number
     offset?: number
   } = {}): Promise<{ backups: BackupResult[], total: number }> {
-    const response = await api.get('/security/backups')
+    const response = await api.get('/api/security/backups')
     return response as { backups: BackupResult[], total: number }
   }
 
@@ -170,7 +170,7 @@ class SecurityService {
     encryption?: boolean
     retention_days?: number
   } = {}): Promise<{ backup: BackupResult, message: string }> {
-    const response = await api.post('/security/backups/full', options)
+    const response = await api.post('/api/security/backups/full', options)
     return response as { backup: BackupResult, message: string }
   }
 
@@ -179,7 +179,7 @@ class SecurityService {
     encryption?: boolean
     retention_days?: number
   } = {}): Promise<{ backup: BackupResult, message: string }> {
-    const response = await api.post('/security/backups/incremental', options)
+    const response = await api.post('/api/security/backups/incremental', options)
     return response as { backup: BackupResult, message: string }
   }
 
@@ -187,18 +187,18 @@ class SecurityService {
     tables?: string[]
     confirmDestruction: boolean
   }): Promise<{ success: boolean, message: string }> {
-    const response = await api.post(`/security/backups/${backupId}/restore`, options)
+    const response = await api.post(`/api/security/backups/${backupId}/restore`, options)
     return response as { success: boolean, message: string }
   }
 
   // Encryption Utilities
   async encryptData(data: string, type: 'general' | 'cpf' | 'phone' = 'general'): Promise<{ encrypted: string }> {
-    const response = await api.post('/security/encrypt-data', { data, type })
+    const response = await api.post('/api/security/encrypt-data', { data, type })
     return response as { encrypted: string }
   }
 
   async decryptData(encryptedData: string, type: 'general' | 'cpf' | 'phone' = 'general'): Promise<{ decrypted: string }> {
-    const response = await api.post('/security/decrypt-data', { encryptedData, type })
+    const response = await api.post('/api/security/decrypt-data', { encryptedData, type })
     return response as { decrypted: string }
   }
 }
