@@ -1,4 +1,8 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+// URL base da API - vem das variáveis de ambiente
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+
+// Log para debug (remover em produção)
+console.log('🔧 API_BASE_URL configurada:', API_BASE_URL)
 
 interface ApiOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'DELETE'
