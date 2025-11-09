@@ -351,11 +351,16 @@ export async function buscarClientePorCPF(cpf: string): Promise<ClienteExterno |
 }
 
 /**
- * Cria um novo cliente no sistema externo
+ * Cria um novo cliente no sistema externo via API do backend
  */
 export async function criarClienteExterno(clienteData: Partial<ClienteExterno>): Promise<ClienteExterno> {
   try {
-    const supabase = getSupabaseExterno()
+    const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+    const token = localStorage.getItem('token')
+    
+    if (!token) {
+      throw new Error('Usuário não autenticado')
+    }
     
     // Preparar dados apenas com campos que existem na tabela
     const insertData: any = {
@@ -381,18 +386,9 @@ export async function criarClienteExterno(clienteData: Partial<ClienteExterno>):
     const valoresSexoValidos = ['masculino', 'feminino', 'outro', 'prefiro não informar']
     if (clienteData.sexo && clienteData.sexo.trim() !== '') {
       const sexoLimpo = clienteData.sexo.trim().toLowerCase()
-      console.log('🔍 Valor do sexo recebido:', JSON.stringify(clienteData.sexo))
-      console.log('🔍 Valor após trim e lowercase:', JSON.stringify(sexoLimpo))
-      console.log('🔍 Está na lista?', valoresSexoValidos.includes(sexoLimpo))
-      
       if (valoresSexoValidos.includes(sexoLimpo)) {
         insertData.sexo = sexoLimpo
-        console.log('✅ Sexo será enviado:', insertData.sexo)
-      } else {
-        console.log('⚠️ Sexo NÃO será enviado (valor inválido)')
       }
-    } else {
-      console.log('ℹ️ Campo sexo vazio ou não preenchido')
     }
     if (clienteData.endereco) {
       insertData.endereco = clienteData.endereco // JSONB
@@ -416,24 +412,26 @@ export async function criarClienteExterno(clienteData: Partial<ClienteExterno>):
       insertData.observacoes = clienteData.observacoes.trim()
     }
     
-    console.log('📝 Criando cliente no sistema externo:')
+    console.log('📝 Criando cliente no sistema externo via API:')
     console.log('📦 Dados completos:', JSON.stringify(insertData, null, 2))
-    console.log('🔑 Chaves:', Object.keys(insertData))
-    console.log('📊 Valores:', Object.values(insertData))
     
-    const { data, error } = await supabase
-      .from('clientes')
-      .insert([insertData])
-      .select()
-      .single()
+    const response = await fetch(`${API_BASE_URL}/api/external-clients`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify(insertData)
+    })
 
-    if (error) {
-      console.error('❌ Erro ao criar cliente externo:', error)
-      throw new Error(`Erro ao criar cliente no sistema externo: ${error.message}`)
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP ${response.status}`)
     }
 
-    console.log('✅ Cliente criado no sistema externo:', data)
-    return data as ClienteExterno
+    const result = await response.json()
+    console.log('✅ Cliente criado no sistema externo:', result.data)
+    return result.data as ClienteExterno
   } catch (error) {
     console.error('❌ Erro ao criar cliente externo:', error)
     throw error
