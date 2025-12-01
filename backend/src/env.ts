@@ -10,6 +10,10 @@ export const env = {
   SUPABASE_EXTERNO_URL: process.env.VITE_SUPABASE_EXTERNO_URL,
   SUPABASE_EXTERNO_SERVICE_KEY: process.env.SUPABASE_EXTERNO_SERVICE_ROLE_KEY,
   SUPABASE_EXTERNO_ANON_KEY: process.env.VITE_SUPABASE_EXTERNO_ANON_KEY,
+  // Supabase Central - Banco de dados compartilhado de clientes
+  SUPABASE_CENTRAL_URL: process.env.SUPABASE_CENTRAL_URL,
+  SUPABASE_CENTRAL_SERVICE_KEY: process.env.SUPABASE_CENTRAL_SERVICE_KEY,
+  SUPABASE_CENTRAL_ANON_KEY: process.env.SUPABASE_CENTRAL_ANON_KEY,
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: parseInt(process.env.PORT || '3001'),
   FRONTEND_URL: process.env.FRONTEND_URL || 'http://localhost:3000'

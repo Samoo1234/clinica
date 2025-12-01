@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { X, Calendar, Clock, User, UserCheck } from 'lucide-react'
+import { X, Calendar, Clock, User, UserCheck, CheckCircle, AlertCircle } from 'lucide-react'
 import { CreateAppointmentData, UpdateAppointmentData, appointmentService } from '../../services/appointments'
-import { Patient } from '../../types/database'
-import { patientService } from '../../services/patients'
+import { PatientCentralService, type Patient } from '../../services/patient-central'
 import { userService, Doctor } from '../../services/users'
 import { useToast } from '../../contexts/ToastContext'
 import { getTimeSlots, isTimeSlotAvailable } from '../../utils/calendar'
+import { createLocalDateTime, extractLocalTime, getLocalDateString } from '../../utils/date'
 
 interface AppointmentFormProps {
   isOpen: boolean
@@ -16,8 +16,6 @@ interface AppointmentFormProps {
   selectedTime?: string
   doctorId?: string
 }
-
-
 
 export function AppointmentForm({
   isOpen,
@@ -38,7 +36,7 @@ export function AppointmentForm({
   const [formData, setFormData] = useState({
     patient_id: '',
     doctor_id: doctorId || '',
-    scheduled_date: selectedDate ? selectedDate.toISOString().split('T')[0] : '',
+    scheduled_date: selectedDate ? getLocalDateString(selectedDate) : '',
     scheduled_time: selectedTime || '',
     duration_minutes: 30,
     notes: '',
@@ -51,12 +49,13 @@ export function AppointmentForm({
       loadPatients()
       loadDoctors()
       if (appointment) {
+        // Extrair data e hora preservando o timezone local
         const scheduledAt = new Date(appointment.scheduled_at)
         setFormData({
           patient_id: appointment.patient_id,
           doctor_id: appointment.doctor_id,
-          scheduled_date: scheduledAt.toISOString().split('T')[0],
-          scheduled_time: scheduledAt.toTimeString().slice(0, 5),
+          scheduled_date: getLocalDateString(scheduledAt),
+          scheduled_time: extractLocalTime(scheduledAt),
           duration_minutes: appointment.duration_minutes,
           notes: appointment.notes || '',
           value: appointment.value || 0,
@@ -74,7 +73,7 @@ export function AppointmentForm({
 
   const loadPatients = async () => {
     try {
-      const response = await patientService.getPatients({ limit: 100 })
+      const response = await PatientCentralService.getAllPatients({ limit: 100 })
       setPatients(response.data)
     } catch (error) {
       console.error('Error loading patients:', error)
@@ -94,9 +93,12 @@ export function AppointmentForm({
 
   const loadAvailableSlots = async () => {
     try {
+      // Usar timestamps no timezone local para filtrar corretamente
+      const startOfDay = createLocalDateTime(formData.scheduled_date, '00:00')
+      const endOfDay = createLocalDateTime(formData.scheduled_date, '23:59')
       const response = await appointmentService.getAppointmentsByDateRange(
-        `${formData.scheduled_date}T00:00:00.000Z`,
-        `${formData.scheduled_date}T23:59:59.999Z`,
+        startOfDay,
+        endOfDay,
         formData.doctor_id
       )
       setExistingAppointments(response)
@@ -118,12 +120,14 @@ export function AppointmentForm({
     setLoading(true)
 
     try {
-      const scheduledAt = new Date(`${formData.scheduled_date}T${formData.scheduled_time}:00.000Z`)
+      // Criar datetime no timezone local (Brasil) - NÃO usar Z que força UTC
+      // createLocalDateTime já retorna ISO string
+      const scheduledAt = createLocalDateTime(formData.scheduled_date, formData.scheduled_time)
       
       const appointmentData = {
         patient_id: formData.patient_id,
         doctor_id: formData.doctor_id,
-        scheduled_at: scheduledAt.toISOString(),
+        scheduled_at: scheduledAt,
         duration_minutes: formData.duration_minutes,
         notes: formData.notes,
         value: formData.value

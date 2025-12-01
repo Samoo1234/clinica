@@ -1,7 +1,6 @@
 import React from 'react'
-import { X, User, Phone, Mail, Calendar, MapPin, Shield, AlertTriangle } from 'lucide-react'
-import { PatientService } from '../../services/patients'
-import type { Patient } from '../../types/database'
+import { X, User, Phone, Mail, Calendar, MapPin, Shield, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react'
+import { PatientCentralService, type Patient } from '../../services/patient-central'
 
 interface PatientDetailsProps {
   patient: Patient | null
@@ -40,7 +39,7 @@ export function PatientDetails({ patient, isOpen, onClose, onEdit }: PatientDeta
       address.neighborhood,
       address.city,
       address.state,
-      PatientService.formatZipCode(address.zipCode)
+      PatientCentralService.formatZipCode(address.zipCode)
     ].filter(Boolean)
     
     return parts.join(', ')
@@ -60,7 +59,7 @@ export function PatientDetails({ patient, isOpen, onClose, onEdit }: PatientDeta
                 {patient.name}
               </h2>
               <p className="text-sm text-gray-500">
-                CPF: {PatientService.formatCPF(patient.cpf)}
+                CPF: {PatientCentralService.formatCPF(patient.cpf)}
               </p>
             </div>
           </div>
@@ -107,7 +106,7 @@ export function PatientDetails({ patient, isOpen, onClose, onEdit }: PatientDeta
                     <Phone className="w-5 h-5 text-gray-400" />
                     <div>
                       <p className="text-sm font-medium text-gray-900">
-                        {PatientService.formatPhone(patient.phone)}
+                        {PatientCentralService.formatPhone(patient.phone)}
                       </p>
                       <p className="text-sm text-gray-500">Telefone principal</p>
                     </div>
@@ -222,7 +221,7 @@ export function PatientDetails({ patient, isOpen, onClose, onEdit }: PatientDeta
                       <div>
                         <p className="text-sm text-gray-500">Telefone</p>
                         <p className="text-sm font-medium text-gray-900">
-                          {PatientService.formatPhone(patient.emergency_contact.phone)}
+                          {PatientCentralService.formatPhone(patient.emergency_contact.phone)}
                         </p>
                       </div>
                       <div>

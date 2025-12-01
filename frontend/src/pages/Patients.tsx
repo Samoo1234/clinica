@@ -7,7 +7,7 @@ import { PatientDetails } from '../components/patients/PatientDetails'
 import { DeletePatientModal } from '../components/patients/DeletePatientModal'
 import NotificationPreferences from '../components/notifications/NotificationPreferences'
 import { useToast } from '../contexts/ToastContext'
-import type { Patient } from '../types/database'
+import type { Patient } from '../services/patient-central'
 
 export function Patients() {
   const [searchParams, setSearchParams] = useSearchParams()

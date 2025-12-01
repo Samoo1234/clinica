@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { X, Save, Loader2 } from 'lucide-react'
-import { PatientService } from '../../services/patients'
-import type { Patient, CreatePatientData, UpdatePatientData } from '../../types/database'
+import { PatientCentralService, type Patient } from '../../services/patient-central'
 
 interface PatientFormProps {
   patient?: Patient
@@ -75,9 +74,9 @@ export function PatientForm({ patient, onSave, onCancel, isOpen }: PatientFormPr
     if (patient) {
       setFormData({
         name: patient.name,
-        cpf: PatientService.formatCPF(patient.cpf),
+        cpf: PatientCentralService.formatCPF(patient.cpf),
         birth_date: patient.birth_date,
-        phone: PatientService.formatPhone(patient.phone),
+        phone: PatientCentralService.formatPhone(patient.phone),
         email: patient.email || '',
         address: {
           street: patient.address?.street || '',
@@ -86,7 +85,7 @@ export function PatientForm({ patient, onSave, onCancel, isOpen }: PatientFormPr
           neighborhood: patient.address?.neighborhood || '',
           city: patient.address?.city || '',
           state: patient.address?.state || '',
-          zipCode: PatientService.formatZipCode(patient.address?.zipCode || '')
+          zipCode: PatientCentralService.formatZipCode(patient.address?.zipCode || '')
         },
         insurance_info: {
           provider: patient.insurance_info?.provider || '',
@@ -95,7 +94,7 @@ export function PatientForm({ patient, onSave, onCancel, isOpen }: PatientFormPr
         },
         emergency_contact: {
           name: patient.emergency_contact?.name || '',
-          phone: PatientService.formatPhone(patient.emergency_contact?.phone || ''),
+          phone: PatientCentralService.formatPhone(patient.emergency_contact?.phone || ''),
           relationship: patient.emergency_contact?.relationship || ''
         }
       })
@@ -215,7 +214,7 @@ export function PatientForm({ patient, onSave, onCancel, isOpen }: PatientFormPr
       }
 
       // Validate data
-      const validationErrors = PatientService.validatePatientData(apiData)
+      const validationErrors = PatientCentralService.validatePatientData(apiData)
       if (validationErrors.length > 0) {
         setErrors(validationErrors)
         setIsLoading(false)
@@ -225,10 +224,10 @@ export function PatientForm({ patient, onSave, onCancel, isOpen }: PatientFormPr
       let savedPatient: Patient
       if (patient) {
         // Update existing patient
-        savedPatient = await PatientService.updatePatient(patient.id, apiData as UpdatePatientData)
+        savedPatient = await PatientCentralService.updatePatient(patient.id, apiData)
       } else {
         // Create new patient
-        savedPatient = await PatientService.createPatient(apiData as CreatePatientData)
+        savedPatient = await PatientCentralService.createPatient(apiData)
       }
 
       onSave(savedPatient)

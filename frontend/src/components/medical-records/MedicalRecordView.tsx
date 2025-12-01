@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Patient, MedicalRecord, Attachment } from '../../types/database'
+import { MedicalRecord, Attachment } from '../../types/database'
+import { Patient } from '../../services/patient-central'
 import { medicalRecordsService } from '../../services/medical-records'
 import { useToast } from '../../contexts/ToastContext'
 import { DigitalSignatureInterface } from '../digital-signature/DigitalSignatureInterface'

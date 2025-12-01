@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Patient } from '../../types/database'
-import { PatientService } from '../../services/patients'
+import { PatientCentralService, type Patient } from '../../services/patient-central'
 import { useToast } from '../../contexts/ToastContext'
-import { Search, User, Calendar, Phone } from 'lucide-react'
+import { Search, User, Calendar, Phone, CheckCircle, AlertCircle } from 'lucide-react'
 import { debounce } from 'lodash'
 
 interface PatientSelectorProps {
@@ -28,7 +27,7 @@ export function PatientSelector({ onPatientSelect }: PatientSelectorProps) {
       try {
         setLoading(true)
         setHasSearched(true)
-        const result = await PatientService.searchPatients({
+        const result = await PatientCentralService.searchPatients({
           query: query.trim(),
           limit: 20
         })
@@ -153,7 +152,7 @@ export function PatientSelector({ onPatientSelect }: PatientSelectorProps) {
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <span className="font-medium">CPF:</span>
-                          {PatientService.formatCPF(patient.cpf)}
+                          {PatientCentralService.formatCPF(patient.cpf)}
                         </div>
                         
                         <div className="flex items-center gap-1">
@@ -166,7 +165,7 @@ export function PatientSelector({ onPatientSelect }: PatientSelectorProps) {
                         
                         <div className="flex items-center gap-1">
                           <Phone className="w-3 h-3" />
-                          {PatientService.formatPhone(patient.phone)}
+                          {PatientCentralService.formatPhone(patient.phone)}
                         </div>
                       </div>
 

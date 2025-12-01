@@ -169,9 +169,11 @@ export async function getAppointmentsByDoctorId(doctorId: string, date?: string)
       .eq('doctor_id', doctorId)
     
     if (date) {
-      const startOfDay = `${date}T00:00:00.000Z`
-      const endOfDay = `${date}T23:59:59.999Z`
-      query = query.gte('scheduled_at', startOfDay).lte('scheduled_at', endOfDay)
+      // Usar timezone local para criar os limites do dia
+      const [year, month, day] = date.split('-').map(Number)
+      const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0)
+      const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999)
+      query = query.gte('scheduled_at', startOfDay.toISOString()).lte('scheduled_at', endOfDay.toISOString())
     }
     
     const { data, error } = await query.order('scheduled_at')

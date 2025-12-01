@@ -1,6 +1,7 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/SimpleAuthContext'
+import { PatientCentralService } from '../services/patient-central'
 import { 
   Users, 
   Calendar, 
@@ -58,6 +59,24 @@ function StatCard({ title, value, icon: Icon, trend, color }: StatCardProps) {
 export function Dashboard() {
   const { user } = useAuth()
   const navigate = useNavigate()
+  const [totalPacientes, setTotalPacientes] = useState<number>(0)
+  const [loadingStats, setLoadingStats] = useState(true)
+
+  // Carregar estatísticas do Banco Central
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        setLoadingStats(true)
+        const result = await PatientCentralService.getAllPatients({ limit: 1 })
+        setTotalPacientes(result.pagination.total)
+      } catch (error) {
+        console.error('Erro ao carregar estatísticas:', error)
+      } finally {
+        setLoadingStats(false)
+      }
+    }
+    loadStats()
+  }, [])
 
   const handleQuickAction = (action: string) => {
     switch (action) {
@@ -143,10 +162,9 @@ export function Dashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-stretch">
         <div onClick={() => navigate('/patients')} className="cursor-pointer">
           <StatCard
-            title="Pacientes"
-            value="1,234"
+            title="Pacientes (Banco Central)"
+            value={loadingStats ? '...' : totalPacientes.toLocaleString('pt-BR')}
             icon={Users}
-            trend={{ value: 12, isPositive: true }}
             color="blue"
           />
         </div>

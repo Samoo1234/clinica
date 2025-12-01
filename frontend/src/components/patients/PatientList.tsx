@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { Search, Filter, Edit, Trash2, Eye, Phone, Mail, Calendar, MapPin } from 'lucide-react'
-import { PatientService } from '../../services/patients'
-import type { Patient, PaginatedResult } from '../../services/patients'
+import { Search, Filter, Edit, Trash2, Eye, Phone, Mail, Calendar, MapPin, CheckCircle, AlertCircle } from 'lucide-react'
+import { PatientCentralService } from '../../services/patient-central'
+import type { Patient, PaginatedResult } from '../../services/patient-central'
 
 interface PatientListProps {
   onEditPatient: (patient: Patient) => void
@@ -49,13 +49,13 @@ export function PatientList({
       let result: PaginatedResult<Patient>
       
       if (query.trim()) {
-        result = await PatientService.searchPatients({
+        result = await PatientCentralService.searchPatients({
           query: query.trim(),
           page,
           limit: pagination.limit
         })
       } else {
-        result = await PatientService.getAllPatients({
+        result = await PatientCentralService.getAllPatients({
           page,
           limit: pagination.limit
         })
@@ -344,7 +344,7 @@ export function PatientList({
                             {patient.name}
                           </div>
                           <div className="text-sm text-gray-500">
-                            CPF: {PatientService.formatCPF(patient.cpf)}
+                            CPF: {PatientCentralService.formatCPF(patient.cpf)}
                           </div>
                         </div>
                       </td>
@@ -352,7 +352,7 @@ export function PatientList({
                         <div className="space-y-1">
                           <div className="flex items-center text-sm text-gray-900">
                             <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                            {PatientService.formatPhone(patient.phone)}
+                            {PatientCentralService.formatPhone(patient.phone)}
                           </div>
                           {patient.email && (
                             <div className="flex items-center text-sm text-gray-500">
@@ -421,13 +421,13 @@ export function PatientList({
                         {patient.name}
                       </h4>
                       <p className="text-sm text-gray-500 mt-1">
-                        CPF: {PatientService.formatCPF(patient.cpf)}
+                        CPF: {PatientCentralService.formatCPF(patient.cpf)}
                       </p>
                       
                       <div className="mt-2 space-y-1">
                         <div className="flex items-center text-sm text-gray-600">
                           <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                          {PatientService.formatPhone(patient.phone)}
+                          {PatientCentralService.formatPhone(patient.phone)}
                         </div>
                         
                         {patient.email && (

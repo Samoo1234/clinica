@@ -5,14 +5,13 @@
 
 import { useState, useEffect } from 'react'
 import { Calendar, Users, UserPlus, CheckCircle, AlertCircle, RefreshCw, Search } from 'lucide-react'
-import { listarAgendamentosExternos, criarClienteExterno, type AgendamentoExterno } from '../services/agendamentos-externos'
-import { patientService } from '../services/patients'
+import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
+import { criarClienteCentral, buscarClientePorTelefone, type ClienteCentral } from '../config/supabaseCentral'
 import { useToast } from '../contexts/ToastContext'
-import { Patient } from '../types/database'
 import { CadastroClienteModal, type DadosClienteCompleto } from '../components/appointments/CadastroClienteModal'
 
 interface AgendamentoComStatus extends AgendamentoExterno {
-  pacienteVisionCare?: Patient
+  clienteCentral?: ClienteCentral
   verificado: boolean
 }
 
@@ -39,35 +38,28 @@ export function AppointmentsExternal() {
         limite: 100
       })
 
-      // Verificar quais pacientes já existem no Vision Care
+      // Verificar quais clientes já existem no Banco Central
       const agendamentosComStatus = await Promise.all(
         data.map(async (agendamento) => {
-          let pacienteVisionCare: Patient | undefined
+          let clienteCentral: ClienteCentral | undefined
           let verificado = false
 
           try {
-            // Tentar buscar por CPF primeiro
-            if (agendamento.cpf) {
-              pacienteVisionCare = await patientService.getPatientByCPF(agendamento.cpf)
-            }
+            // Buscar cliente por telefone no banco central
+            const cliente = await buscarClientePorTelefone(agendamento.telefone)
             
-            // Se não encontrou por CPF, tentar por nome
-            if (!pacienteVisionCare) {
-              const resultado = await patientService.getPatients()
-              const pacientes = Array.isArray(resultado) ? resultado : resultado.data
-              pacienteVisionCare = pacientes.find(p => 
-                p.name.toLowerCase() === agendamento.nome.toLowerCase()
-              )
+            if (cliente) {
+              clienteCentral = cliente
             }
             
             verificado = true
           } catch (error) {
-            console.error('Erro ao verificar paciente:', error)
+            console.error('Erro ao verificar cliente:', error)
           }
 
           return {
             ...agendamento,
-            pacienteVisionCare,
+            clienteCentral,
             verificado
           }
         })
@@ -83,7 +75,6 @@ export function AppointmentsExternal() {
 
   const handleCadastrarPaciente = async (dadosCliente: DadosClienteCompleto) => {
     try {
-      // 1. Criar cliente no Sistema Externo
       // Montar objeto endereco (JSONB) - apenas se houver algum dado de endereço
       let enderecoObj: any = null
       if (dadosCliente.endereco || dadosCliente.cep || dadosCliente.bairro || dadosCliente.numero) {
@@ -100,9 +91,9 @@ export function AppointmentsExternal() {
       console.log('📍 Objeto endereco montado:', enderecoObj)
       console.log('🔍 Dados do cliente antes de enviar:', dadosCliente)
 
-      // Validar sexo - valores em MINÚSCULO conforme banco externo
+      // Validar sexo
       const valoresSexoValidos = ['masculino', 'feminino', 'outro', 'prefiro não informar']
-      let sexoValido = null
+      let sexoValido = undefined
       if (dadosCliente.sexo && typeof dadosCliente.sexo === 'string') {
         const sexoLimpo = dadosCliente.sexo.trim().toLowerCase()
         if (sexoLimpo !== '' && valoresSexoValidos.includes(sexoLimpo)) {
@@ -111,51 +102,24 @@ export function AppointmentsExternal() {
       }
       console.log('✅ Sexo validado:', sexoValido)
 
-      const clienteExterno = await criarClienteExterno({
+      // Criar cliente no Banco Central
+      const novoCliente = await criarClienteCentral({
         nome: dadosCliente.nome.trim(),
-        cpf: dadosCliente.cpf?.trim() || null,
-        rg: dadosCliente.rg?.trim() || null,
         telefone: dadosCliente.telefone.trim(),
-        email: dadosCliente.email?.trim() || null,
-        data_nascimento: dadosCliente.data_nascimento || null,
+        cpf: dadosCliente.cpf?.trim() || undefined,
+        rg: dadosCliente.rg?.trim() || undefined,
+        email: dadosCliente.email?.trim() || undefined,
+        data_nascimento: dadosCliente.data_nascimento || undefined,
         sexo: sexoValido,
         endereco: enderecoObj,
-        cidade: dadosCliente.cidade?.trim() || null,
-        nome_pai: dadosCliente.nome_pai?.trim() || null,
-        nome_mae: dadosCliente.nome_mae?.trim() || null,
-        observacoes: dadosCliente.observacoes?.trim() || null
+        cidade: dadosCliente.cidade?.trim() || undefined,
+        nome_pai: dadosCliente.nome_pai?.trim() || undefined,
+        nome_mae: dadosCliente.nome_mae?.trim() || undefined,
+        observacoes: dadosCliente.observacoes?.trim() || undefined,
+        cadastro_completo: false // Cadastro inicial do agendamento
       })
-
-      // 2. Criar paciente no Vision Care
-      const patientData: any = {
-        name: dadosCliente.nome,
-        phone: dadosCliente.telefone,
-        email: dadosCliente.email || undefined,
-        birth_date: dadosCliente.data_nascimento || undefined,
-        address: (dadosCliente.endereco || dadosCliente.cidade) ? {
-          street: dadosCliente.endereco || '',
-          number: dadosCliente.numero || '',
-          neighborhood: dadosCliente.bairro || '',
-          city: dadosCliente.cidade || '',
-          state: dadosCliente.estado || '',
-          zipCode: dadosCliente.cep || '',
-          complement: dadosCliente.complemento
-        } : undefined,
-        nome_pai: dadosCliente.nome_pai || undefined,
-        nome_mae: dadosCliente.nome_mae || undefined,
-        notes: dadosCliente.observacoes || undefined
-      }
       
-      // Adicionar CPF apenas se tiver valor válido
-      if (dadosCliente.cpf && dadosCliente.cpf.trim() !== '') {
-        patientData.cpf = dadosCliente.cpf.trim()
-      }
-      
-      console.log('📝 Dados do paciente para Vision Care:', patientData)
-
-      const novoPaciente = await patientService.createPatient(patientData)
-      
-      showSuccess(`Cliente cadastrado com sucesso nos dois sistemas! ID Externo: ${clienteExterno.id}`)
+      showSuccess(`Cliente cadastrado com sucesso no banco central! ID: ${novoCliente.id}`)
       
       // Atualizar a lista
       carregarAgendamentos()
@@ -177,8 +141,8 @@ export function AppointmentsExternal() {
                        ag.telefone.includes(searchTerm)
     
     const matchStatus = statusFilter === 'todos' ? true :
-                       statusFilter === 'cadastrado' ? !!ag.pacienteVisionCare :
-                       statusFilter === 'nao-cadastrado' ? !ag.pacienteVisionCare :
+                       statusFilter === 'cadastrado' ? !!ag.clienteCentral :
+                       statusFilter === 'nao-cadastrado' ? !ag.clienteCentral :
                        ag.status === statusFilter
 
     return matchSearch && matchStatus
@@ -186,8 +150,8 @@ export function AppointmentsExternal() {
 
   const stats = {
     total: agendamentos.length,
-    cadastrados: agendamentos.filter(a => a.pacienteVisionCare).length,
-    naoCadastrados: agendamentos.filter(a => !a.pacienteVisionCare).length,
+    cadastrados: agendamentos.filter(a => a.clienteCentral).length,
+    naoCadastrados: agendamentos.filter(a => !a.clienteCentral).length,
     confirmados: agendamentos.filter(a => a.status === 'confirmado').length
   }
 
@@ -341,7 +305,7 @@ export function AppointmentsExternal() {
                             <div className="text-sm text-gray-500">📍 {agendamento.cidade}</div>
                           )}
                         </div>
-                        {agendamento.pacienteVisionCare && (
+                        {agendamento.clienteCentral && (
                           <CheckCircle className="w-5 h-5 text-green-600" />
                         )}
                       </div>
@@ -385,10 +349,17 @@ export function AppointmentsExternal() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      {agendamento.pacienteVisionCare ? (
-                        <span className="text-sm text-green-600 font-medium">
-                          ✓ Cadastrado
-                        </span>
+                      {agendamento.clienteCentral ? (
+                        <div className="flex flex-col">
+                          <span className="text-sm text-green-600 font-medium">
+                            ✓ Cadastrado
+                          </span>
+                          {!agendamento.clienteCentral.cadastro_completo && (
+                            <span className="text-xs text-orange-600">
+                              ⚠️ Cadastro parcial
+                            </span>
+                          )}
+                        </div>
                       ) : (
                         <button
                           onClick={() => abrirModalCadastro(agendamento)}

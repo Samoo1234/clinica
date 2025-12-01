@@ -19,6 +19,7 @@ import reportsRoutes from './routes/reports'
 import digitalSignatureRoutes from './routes/digital-signature'
 import externalIntegrationRoutes from './routes/external-integration'
 import externalClientsRoutes from './routes/external-clients'
+import centralClientsRoutes from './routes/central-clients'
 import nfseRoutes from './routes/nfse'
 import notificationRoutes from './routes/notifications'
 import securityRoutes from './routes/security'
@@ -187,6 +188,7 @@ app.use('/api/reports', reportsRoutes)
 app.use('/api/digital-signature', digitalSignatureRoutes)
 app.use('/api/external', externalIntegrationRoutes)
 app.use('/api/external-clients', externalClientsRoutes)
+app.use('/api/central-clients', centralClientsRoutes)
 app.use('/api/nfse', nfseRoutes)
 app.use('/api/notifications', notificationRoutes)
 app.use('/api/security', securityRoutes)

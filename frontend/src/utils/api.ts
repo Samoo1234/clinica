@@ -11,6 +11,19 @@ interface ApiOptions {
   responseType?: 'json' | 'blob'
 }
 
+// Erro customizado com status HTTP
+export class ApiError extends Error {
+  status: number
+  response: { status: number; data: any }
+  
+  constructor(message: string, status: number, data?: any) {
+    super(message)
+    this.name = 'ApiError'
+    this.status = status
+    this.response = { status, data }
+  }
+}
+
 class ApiClient {
   private getAuthHeaders(): Record<string, string> {
     const token = localStorage.getItem('token')

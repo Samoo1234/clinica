@@ -71,6 +71,8 @@ export interface Patient {
   address: PatientAddress
   insurance_info?: InsuranceInfo
   emergency_contact?: EmergencyContact
+  agendamento_cliente_id?: string
+  erp_cliente_id?: string
   created_at: string
   updated_at: string
 }
@@ -84,6 +86,8 @@ export interface CreatePatientData {
   address: PatientAddress
   insurance_info?: InsuranceInfo
   emergency_contact?: EmergencyContact
+  agendamento_cliente_id?: string
+  erp_cliente_id?: string
 }
 
 export interface UpdatePatientData {

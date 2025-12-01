@@ -4,8 +4,8 @@ import { PatientSelector } from '../components/medical-records/PatientSelector'
 import { MedicalRecordsList } from '../components/medical-records/MedicalRecordsList'
 import { MedicalRecordForm } from '../components/medical-records/MedicalRecordForm'
 import { MedicalRecordView } from '../components/medical-records/MedicalRecordView'
-import { Patient, MedicalRecord } from '../types/database'
-import { PatientService } from '../services/patients'
+import { MedicalRecord } from '../types/database'
+import { PatientCentralService, type Patient } from '../services/patient-central'
 import { medicalRecordsService } from '../services/medical-records'
 import { useToast } from '../contexts/ToastContext'
 import { FileText, Plus, ArrowLeft } from 'lucide-react'
@@ -54,7 +54,7 @@ export function MedicalRecords() {
   const loadPatient = async (patientId: string) => {
     try {
       setLoading(true)
-      const patient = await PatientService.getPatientById(patientId)
+      const patient = await PatientCentralService.getPatientById(patientId)
       setSelectedPatient(patient)
       await loadMedicalRecords(patientId)
     } catch (error) {
@@ -185,7 +185,7 @@ export function MedicalRecords() {
               Prontuários - {selectedPatient.name}
             </h1>
             <p className="text-gray-600">
-              CPF: {PatientService.formatCPF(selectedPatient.cpf)}
+              CPF: {PatientCentralService.formatCPF(selectedPatient.cpf)}
             </p>
           </div>
         </div>

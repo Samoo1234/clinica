@@ -5,6 +5,7 @@ import {
   AppointmentStatus 
 } from '../types/database'
 import notificationService from './notifications'
+import { startOfDayBrazil, endOfDayBrazil } from '../utils/timezone'
 
 export class AppointmentService {
   // Get all appointments with optional filters
@@ -34,13 +35,13 @@ export class AppointmentService {
     }
 
     if (filters?.date) {
-      const startDate = new Date(filters.date)
-      const endDate = new Date(filters.date)
-      endDate.setDate(endDate.getDate() + 1)
+      // Usar timezone Brasil para filtrar corretamente por dia
+      const dayStart = startOfDayBrazil(filters.date)
+      const dayEnd = endOfDayBrazil(filters.date)
       
       query = query
-        .gte('scheduled_at', startDate.toISOString())
-        .lt('scheduled_at', endDate.toISOString())
+        .gte('scheduled_at', dayStart)
+        .lte('scheduled_at', dayEnd)
     }
 
     if (filters?.status) {

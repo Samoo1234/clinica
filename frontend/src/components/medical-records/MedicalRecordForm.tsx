@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { Patient, MedicalRecord, PhysicalExam } from '../../types/database'
+import { MedicalRecord, PhysicalExam } from '../../types/database'
+import { Patient } from '../../services/patient-central'
 import { medicalRecordsService, CreateMedicalRecordData, UpdateMedicalRecordData } from '../../services/medical-records'
 import { useAuth } from '../../contexts/SimpleAuthContext'
 import { useToast } from '../../contexts/ToastContext'

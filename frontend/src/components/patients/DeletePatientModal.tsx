@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { AlertTriangle, Trash2, X, Loader2 } from 'lucide-react'
-import { PatientService } from '../../services/patients'
-import type { Patient } from '../../types/database'
+import { PatientCentralService, type Patient } from '../../services/patient-central'
 
 interface DeletePatientModalProps {
   patient: Patient | null
@@ -21,7 +20,7 @@ export function DeletePatientModal({ patient, isOpen, onClose, onDeleted }: Dele
     setError(null)
 
     try {
-      await PatientService.deletePatient(patient.id)
+      await PatientCentralService.deletePatient(patient.id)
       onDeleted()
       onClose()
     } catch (error: any) {
@@ -96,8 +95,8 @@ export function DeletePatientModal({ patient, isOpen, onClose, onDeleted }: Dele
             </h4>
             <div className="space-y-1 text-sm text-gray-600">
               <p><strong>Nome:</strong> {patient.name}</p>
-              <p><strong>CPF:</strong> {PatientService.formatCPF(patient.cpf)}</p>
-              <p><strong>Telefone:</strong> {PatientService.formatPhone(patient.phone)}</p>
+              <p><strong>CPF:</strong> {PatientCentralService.formatCPF(patient.cpf)}</p>
+              <p><strong>Telefone:</strong> {PatientCentralService.formatPhone(patient.phone)}</p>
               {patient.email && (
                 <p><strong>Email:</strong> {patient.email}</p>
               )}

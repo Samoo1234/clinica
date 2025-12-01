@@ -1,6 +1,7 @@
 import { supabaseAdmin } from '../config/supabase';
 import nodemailer from 'nodemailer';
 import { Database } from '../types/database';
+import { formatDateBrazil, formatTimeBrazil, BRAZIL_TIMEZONE } from '../utils/timezone';
 
 type NotificationType = Database['public']['Enums']['notification_type'];
 type NotificationChannel = Database['public']['Enums']['notification_channel'];
@@ -141,8 +142,8 @@ class NotificationService {
       // Prepare variables for template
       const variables = {
         patient_name: appointment.patient.name,
-        appointment_date: appointmentTime.toLocaleDateString('pt-BR'),
-        appointment_time: appointmentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        appointment_date: formatDateBrazil(appointment.scheduled_at),
+        appointment_time: formatTimeBrazil(appointment.scheduled_at),
         doctor_name: appointment.doctor.name,
       };
 
@@ -210,11 +211,11 @@ class NotificationService {
         throw new Error('Appointment not found');
       }
 
-      const appointmentTime = new Date(appointment.scheduled_at);
+      // Usar funções de formatação com timezone Brasil explícito
       const variables = {
         patient_name: appointment.patient.name,
-        appointment_date: appointmentTime.toLocaleDateString('pt-BR'),
-        appointment_time: appointmentTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        appointment_date: formatDateBrazil(appointment.scheduled_at),
+        appointment_time: formatTimeBrazil(appointment.scheduled_at),
         doctor_name: appointment.doctor.name,
       };
 

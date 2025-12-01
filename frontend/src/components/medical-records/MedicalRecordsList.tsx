@@ -1,5 +1,6 @@
 import React from 'react'
-import { Patient, MedicalRecord } from '../../types/database'
+import { MedicalRecord } from '../../types/database'
+import { Patient } from '../../services/patient-central'
 import { medicalRecordsService } from '../../services/medical-records'
 import { 
   FileText, 
