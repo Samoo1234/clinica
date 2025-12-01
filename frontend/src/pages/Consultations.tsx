@@ -9,7 +9,7 @@ import { consultationsService } from '../services/consultations'
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
 import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
-import { getLocalDateString, isToday, isTodayOrFuture } from '../utils/date'
+import { getLocalDateString, isToday, isTodayOrFuture, formatDateBR } from '../utils/date'
 
 export default function Consultations() {
   const { user } = useAuth()
@@ -288,7 +288,7 @@ export default function Consultations() {
                           <div className="mt-1 text-sm text-gray-600 space-y-1">
                             <div className="flex items-center gap-4">
                               <span className={isHoje ? 'font-medium text-blue-600' : ''}>
-                                📅 {new Date(agendamento.data).toLocaleDateString('pt-BR')}
+                                📅 {formatDateBR(agendamento.data)}
                               </span>
                               <span>🕐 {agendamento.horario}</span>
                               {agendamento.telefone && <span>📞 {agendamento.telefone}</span>}

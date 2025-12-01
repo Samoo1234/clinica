@@ -111,3 +111,17 @@ Thumbs.db
 
 # MCP Server logs
 mcp-server/*.log
+
+# Arquivos com credenciais - NUNCA commitar!
+ADICIONAR-NO-ENV.txt
+BANCO-CENTRAL-SETUP.md
+CONFIGURAR-VERCEL-AGORA.md
+DEPLOY-BACKEND-AGORA.md
+DEPLOY-GUIDE.md
+FAZER-AGORA.txt
+MAPEAMENTO-SISTEMA.md
+test-banco-central.js
+*.example
+docs/PRONTO-PARA-USAR.md
+docs/guia-rapido-integracao.md
+docs/onde-ver-agendamentos-externos.md

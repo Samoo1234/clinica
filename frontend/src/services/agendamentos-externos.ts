@@ -7,8 +7,14 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import { parseDateFromDB, getLocalDateString } from '../utils/date'
 
 // Configuração do cliente Supabase para o projeto externo
-const SUPABASE_EXTERNO_URL = import.meta.env.VITE_SUPABASE_EXTERNO_URL || 'https://dmsaqxuoruinwpnonpky.supabase.co'
-const SUPABASE_EXTERNO_KEY = import.meta.env.VITE_SUPABASE_EXTERNO_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtc2FxeHVvcnVpbndwbm9ucGt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTI5MzQyNTYsImV4cCI6MjA2ODUxMDI1Nn0.qgUE3Lpn5-dgphbW6k59Pu4M-xkwpI6KtAYR7m5FkdU'
+// IMPORTANTE: As credenciais DEVEM estar no arquivo .env, NUNCA no código!
+const SUPABASE_EXTERNO_URL = import.meta.env.VITE_SUPABASE_EXTERNO_URL
+const SUPABASE_EXTERNO_KEY = import.meta.env.VITE_SUPABASE_EXTERNO_ANON_KEY
+
+if (!SUPABASE_EXTERNO_URL || !SUPABASE_EXTERNO_KEY) {
+  console.error('❌ ERRO: Variáveis de ambiente do Supabase Externo não configuradas!')
+  console.error('Configure VITE_SUPABASE_EXTERNO_URL e VITE_SUPABASE_EXTERNO_ANON_KEY no arquivo .env')
+}
 
 // Debug: verificar se as variáveis estão carregadas
 console.log('🔍 Variáveis de ambiente:')

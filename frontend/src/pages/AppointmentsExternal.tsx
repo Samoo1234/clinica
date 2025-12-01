@@ -6,7 +6,8 @@
 import { useState, useEffect } from 'react'
 import { Calendar, Users, UserPlus, CheckCircle, AlertCircle, RefreshCw, Search } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
-import { criarClienteCentral, buscarClientePorTelefone, type ClienteCentral } from '../config/supabaseCentral'
+import { formatDateBR } from '../utils/date'
+import { criarClienteCentral, atualizarClienteCentral, buscarClientePorTelefone, type ClienteCentral } from '../config/supabaseCentral'
 import { useToast } from '../contexts/ToastContext'
 import { CadastroClienteModal, type DadosClienteCompleto } from '../components/appointments/CadastroClienteModal'
 
@@ -23,7 +24,7 @@ export function AppointmentsExternal() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<string>('todos')
   const [showCadastroModal, setShowCadastroModal] = useState(false)
-  const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<AgendamentoExterno | null>(null)
+  const [agendamentoSelecionado, setAgendamentoSelecionado] = useState<AgendamentoComStatus | null>(null)
 
   useEffect(() => {
     carregarAgendamentos()
@@ -73,7 +74,7 @@ export function AppointmentsExternal() {
     }
   }
 
-  const handleCadastrarPaciente = async (dadosCliente: DadosClienteCompleto) => {
+  const handleCadastrarPaciente = async (dadosCliente: DadosClienteCompleto, clienteId?: string) => {
     try {
       // Montar objeto endereco (JSONB) - apenas se houver algum dado de endereço
       let enderecoObj: any = null
@@ -102,24 +103,46 @@ export function AppointmentsExternal() {
       }
       console.log('✅ Sexo validado:', sexoValido)
 
-      // Criar cliente no Banco Central
-      const novoCliente = await criarClienteCentral({
-        nome: dadosCliente.nome.trim(),
-        telefone: dadosCliente.telefone.trim(),
-        cpf: dadosCliente.cpf?.trim() || undefined,
-        rg: dadosCliente.rg?.trim() || undefined,
-        email: dadosCliente.email?.trim() || undefined,
-        data_nascimento: dadosCliente.data_nascimento || undefined,
-        sexo: sexoValido,
-        endereco: enderecoObj,
-        cidade: dadosCliente.cidade?.trim() || undefined,
-        nome_pai: dadosCliente.nome_pai?.trim() || undefined,
-        nome_mae: dadosCliente.nome_mae?.trim() || undefined,
-        observacoes: dadosCliente.observacoes?.trim() || undefined,
-        cadastro_completo: false // Cadastro inicial do agendamento
-      })
-      
-      showSuccess(`Cliente cadastrado com sucesso no banco central! ID: ${novoCliente.id}`)
+      // Criar ou atualizar cliente no Banco Central
+      if (clienteId) {
+        // Atualizar cliente existente
+        await atualizarClienteCentral(clienteId, {
+          nome: dadosCliente.nome.trim(),
+          telefone: dadosCliente.telefone.trim(),
+          cpf: dadosCliente.cpf?.trim() || undefined,
+          rg: dadosCliente.rg?.trim() || undefined,
+          email: dadosCliente.email?.trim() || undefined,
+          data_nascimento: dadosCliente.data_nascimento || undefined,
+          sexo: sexoValido,
+          endereco: enderecoObj,
+          cidade: dadosCliente.cidade?.trim() || undefined,
+          nome_pai: dadosCliente.nome_pai?.trim() || undefined,
+          nome_mae: dadosCliente.nome_mae?.trim() || undefined,
+          observacoes: dadosCliente.observacoes?.trim() || undefined,
+          cadastro_completo: true // Marcar como completo ao atualizar
+        })
+        
+        showSuccess('Cadastro completado com sucesso!')
+      } else {
+        // Criar novo cliente
+        const novoCliente = await criarClienteCentral({
+          nome: dadosCliente.nome.trim(),
+          telefone: dadosCliente.telefone.trim(),
+          cpf: dadosCliente.cpf?.trim() || undefined,
+          rg: dadosCliente.rg?.trim() || undefined,
+          email: dadosCliente.email?.trim() || undefined,
+          data_nascimento: dadosCliente.data_nascimento || undefined,
+          sexo: sexoValido,
+          endereco: enderecoObj,
+          cidade: dadosCliente.cidade?.trim() || undefined,
+          nome_pai: dadosCliente.nome_pai?.trim() || undefined,
+          nome_mae: dadosCliente.nome_mae?.trim() || undefined,
+          observacoes: dadosCliente.observacoes?.trim() || undefined,
+          cadastro_completo: false // Cadastro inicial do agendamento
+        })
+        
+        showSuccess(`Cliente cadastrado com sucesso! ID: ${novoCliente.id}`)
+      }
       
       // Atualizar a lista
       carregarAgendamentos()
@@ -130,7 +153,7 @@ export function AppointmentsExternal() {
     }
   }
 
-  const abrirModalCadastro = (agendamento: AgendamentoExterno) => {
+  const abrirModalCadastro = (agendamento: AgendamentoComStatus) => {
     setAgendamentoSelecionado(agendamento)
     setShowCadastroModal(true)
   }
@@ -312,7 +335,7 @@ export function AppointmentsExternal() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">
-                        {new Date(agendamento.data).toLocaleDateString('pt-BR')}
+                        {formatDateBR(agendamento.data)}
                       </div>
                       <div className="text-sm text-gray-500">{agendamento.horario}</div>
                     </td>
@@ -350,14 +373,23 @@ export function AppointmentsExternal() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {agendamento.clienteCentral ? (
-                        <div className="flex flex-col">
+                        <div className="flex flex-col gap-1">
                           <span className="text-sm text-green-600 font-medium">
                             ✓ Cadastrado
                           </span>
                           {!agendamento.clienteCentral.cadastro_completo && (
-                            <span className="text-xs text-orange-600">
-                              ⚠️ Cadastro parcial
-                            </span>
+                            <>
+                              <span className="text-xs text-orange-600">
+                                ⚠️ Cadastro parcial
+                              </span>
+                              <button
+                                onClick={() => abrirModalCadastro(agendamento)}
+                                className="flex items-center gap-1 px-3 py-1.5 bg-orange-500 text-white text-sm rounded-lg hover:bg-orange-600 transition-colors"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                                Completar
+                              </button>
+                            </>
                           )}
                         </div>
                       ) : (
@@ -382,6 +414,7 @@ export function AppointmentsExternal() {
       {showCadastroModal && agendamentoSelecionado && (
         <CadastroClienteModal
           agendamento={agendamentoSelecionado}
+          clienteExistente={agendamentoSelecionado.clienteCentral}
           onClose={() => {
             setShowCadastroModal(false)
             setAgendamentoSelecionado(null)

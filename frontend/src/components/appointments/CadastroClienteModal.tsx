@@ -6,11 +6,13 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
 import { AgendamentoExterno } from '../../services/agendamentos-externos'
+import { ClienteCentral } from '../../config/supabaseCentral'
 
 interface CadastroClienteModalProps {
   agendamento: AgendamentoExterno
+  clienteExistente?: ClienteCentral | null
   onClose: () => void
-  onSave: (dadosCliente: DadosClienteCompleto) => Promise<void>
+  onSave: (dadosCliente: DadosClienteCompleto, clienteId?: string) => Promise<void>
 }
 
 export interface DadosClienteCompleto {
@@ -33,26 +35,41 @@ export interface DadosClienteCompleto {
   observacoes?: string
 }
 
-export function CadastroClienteModal({ agendamento, onClose, onSave }: CadastroClienteModalProps) {
+export function CadastroClienteModal({ agendamento, clienteExistente, onClose, onSave }: CadastroClienteModalProps) {
   const [loading, setLoading] = useState(false)
+  
+  // Determina se é modo de edição (completar cadastro)
+  const isEdicao = !!clienteExistente
+  
+  // Extrai dados do endereço do cliente existente (se houver)
+  const enderecoExistente = clienteExistente?.endereco as {
+    rua?: string
+    numero?: string
+    bairro?: string
+    cidade?: string
+    estado?: string
+    cep?: string
+    complemento?: string
+  } | null
+  
   const [formData, setFormData] = useState<DadosClienteCompleto>({
-    nome: agendamento.nome || '',
-    cpf: agendamento.cpf || '',
-    telefone: agendamento.telefone || '',
-    email: agendamento.email || '',
-    data_nascimento: agendamento.data_nascimento || '',
-    cidade: agendamento.cidade || '',
-    rg: '',
-    sexo: '',
-    endereco: '',
-    numero: '',
-    bairro: '',
-    complemento: '',
-    estado: '',
-    cep: '',
-    nome_pai: '',
-    nome_mae: '',
-    observacoes: ''
+    nome: clienteExistente?.nome || agendamento.nome || '',
+    cpf: clienteExistente?.cpf || agendamento.cpf || '',
+    telefone: clienteExistente?.telefone || agendamento.telefone || '',
+    email: clienteExistente?.email || agendamento.email || '',
+    data_nascimento: clienteExistente?.data_nascimento || agendamento.data_nascimento || '',
+    cidade: clienteExistente?.cidade || enderecoExistente?.cidade || agendamento.cidade || '',
+    rg: clienteExistente?.rg || '',
+    sexo: clienteExistente?.sexo || '',
+    endereco: enderecoExistente?.rua || '',
+    numero: enderecoExistente?.numero || '',
+    bairro: enderecoExistente?.bairro || '',
+    complemento: enderecoExistente?.complemento || '',
+    estado: enderecoExistente?.estado || '',
+    cep: enderecoExistente?.cep || '',
+    nome_pai: clienteExistente?.nome_pai || '',
+    nome_mae: clienteExistente?.nome_mae || '',
+    observacoes: clienteExistente?.observacoes || ''
   })
 
   const handleChange = (field: keyof DadosClienteCompleto, value: string) => {
@@ -69,7 +86,7 @@ export function CadastroClienteModal({ agendamento, onClose, onSave }: CadastroC
 
     try {
       setLoading(true)
-      await onSave(formData)
+      await onSave(formData, clienteExistente?.id)
     } catch (error) {
       console.error('Erro ao salvar:', error)
     } finally {
@@ -84,10 +101,13 @@ export function CadastroClienteModal({ agendamento, onClose, onSave }: CadastroC
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h3 className="text-lg font-bold text-gray-900">
-              Cadastrar Novo Cliente
+              {isEdicao ? 'Completar Cadastro' : 'Cadastrar Novo Cliente'}
             </h3>
             <p className="text-sm text-gray-600 mt-1">
-              Os dados serão salvos no Vision Care e no Sistema Externo
+              {isEdicao 
+                ? 'Complete os dados do cliente para finalizar o cadastro'
+                : 'Os dados serão salvos no Vision Care e no Sistema Externo'
+              }
             </p>
           </div>
           <button
@@ -344,11 +364,19 @@ export function CadastroClienteModal({ agendamento, onClose, onSave }: CadastroC
 
         {/* Footer */}
         <div className="border-t border-gray-200 p-6 bg-gray-50">
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
-            <p className="text-sm text-blue-800">
-              ℹ️ O cliente será cadastrado simultaneamente no <strong>Vision Care</strong> e no <strong>Sistema Externo</strong>
-            </p>
-          </div>
+          {isEdicao ? (
+            <div className="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-orange-800">
+                ⚠️ Complete os dados faltantes e marque o cadastro como <strong>completo</strong>
+              </p>
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+              <p className="text-sm text-blue-800">
+                ℹ️ O cliente será cadastrado simultaneamente no <strong>Vision Care</strong> e no <strong>Sistema Externo</strong>
+              </p>
+            </div>
+          )}
           
           <div className="flex gap-3">
             <button
@@ -370,7 +398,7 @@ export function CadastroClienteModal({ agendamento, onClose, onSave }: CadastroC
                   Salvando...
                 </>
               ) : (
-                'Cadastrar Cliente'
+                isEdicao ? 'Salvar e Completar' : 'Cadastrar Cliente'
               )}
             </button>
           </div>
