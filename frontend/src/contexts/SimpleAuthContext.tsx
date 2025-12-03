@@ -61,10 +61,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
     // Simple validation - aceita qualquer email/senha para teste
     if (email && password) {
       const mockToken = 'mock-jwt-token-' + Date.now()
+      // Usando ID real de médico existente na tabela medicos
       const mockUser = {
-        id: '550e8400-e29b-41d4-a716-446655440001',
+        id: 'c398bec7-99d0-4eb0-9265-19ff998ca3ed',
         email: email,
-        name: 'Dr. Admin',
+        name: 'Dr. Sávio Carmo',
         role: 'admin' as UserRole,
         active: true
       }

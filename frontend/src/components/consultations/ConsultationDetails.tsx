@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { Consultation } from '../../types/consultations'
-import { VitalSignsForm } from './VitalSignsForm'
+import { Consultation, ExameOftalmologico } from '../../types/consultations'
+import { ExameOftalmologicoForm } from './ExameOftalmologicoForm'
 import { ConsultationNotes } from './ConsultationNotes'
 import { CompleteConsultationModal } from './CompleteConsultationModal'
 import { 
@@ -8,7 +8,7 @@ import {
   Calendar, 
   Phone, 
   Mail, 
-  Activity, 
+  Eye, 
   FileText, 
   CheckCircle,
   Play,
@@ -30,7 +30,7 @@ export function ConsultationDetails({
   canEdit
 }: ConsultationDetailsProps) {
   const [showCompleteModal, setShowCompleteModal] = useState(false)
-  const [editingVitalSigns, setEditingVitalSigns] = useState(false)
+  const [editingExame, setEditingExame] = useState(false)
   const [editingNotes, setEditingNotes] = useState(false)
 
   const formatDateTime = (dateString: string) => {
@@ -79,9 +79,9 @@ export function ConsultationDetails({
     onUpdateConsultation(consultation.id, { status: 'waiting' })
   }
 
-  const handleVitalSignsUpdate = (vitalSigns: Consultation['vitalSigns']) => {
-    onUpdateConsultation(consultation.id, { vitalSigns })
-    setEditingVitalSigns(false)
+  const handleExameUpdate = (exameOftalmologico: ExameOftalmologico) => {
+    onUpdateConsultation(consultation.id, { exameOftalmologico })
+    setEditingExame(false)
   }
 
   const handleNotesUpdate = (notes: string) => {
@@ -229,16 +229,16 @@ export function ConsultationDetails({
           </div>
         </div>
 
-        {/* Vital Signs */}
+        {/* Exame Oftalmológico */}
         <div className="mt-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-medium text-gray-900 flex items-center space-x-2">
-              <Activity className="w-5 h-5" />
-              <span>Sinais Vitais</span>
+              <Eye className="w-5 h-5" />
+              <span>Exame Oftalmológico</span>
             </h3>
             {canEdit && consultation.status === 'in_progress' && (
               <button
-                onClick={() => setEditingVitalSigns(true)}
+                onClick={() => setEditingExame(true)}
                 className="flex items-center space-x-2 text-blue-600 hover:text-blue-700"
               >
                 <Edit className="w-4 h-4" />
@@ -247,11 +247,11 @@ export function ConsultationDetails({
             )}
           </div>
 
-          <VitalSignsForm
-            vitalSigns={consultation.vitalSigns}
-            editing={editingVitalSigns}
-            onSave={handleVitalSignsUpdate}
-            onCancel={() => setEditingVitalSigns(false)}
+          <ExameOftalmologicoForm
+            exame={consultation.exameOftalmologico}
+            editing={editingExame}
+            onSave={handleExameUpdate}
+            onCancel={() => setEditingExame(false)}
             readOnly={!canEdit || consultation.status !== 'in_progress'}
           />
         </div>

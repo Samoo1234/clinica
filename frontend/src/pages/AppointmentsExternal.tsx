@@ -7,7 +7,7 @@ import { useState, useEffect } from 'react'
 import { Calendar, Users, UserPlus, CheckCircle, AlertCircle, RefreshCw, Search } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
 import { formatDateBR } from '../utils/date'
-import { criarClienteCentral, atualizarClienteCentral, buscarClientePorTelefone, type ClienteCentral } from '../config/supabaseCentral'
+import { criarClienteCentral, atualizarClienteCentral, buscarClientePorTelefone, buscarClientePorCPF, buscarClientePorCodigo, type ClienteCentral } from '../config/supabaseCentral'
 import { useToast } from '../contexts/ToastContext'
 import { CadastroClienteModal, type DadosClienteCompleto } from '../components/appointments/CadastroClienteModal'
 
@@ -40,17 +40,29 @@ export function AppointmentsExternal() {
       })
 
       // Verificar quais clientes já existem no Banco Central
+      // Hierarquia de busca: CPF > telefone (CPF é mais confiável)
       const agendamentosComStatus = await Promise.all(
         data.map(async (agendamento) => {
           let clienteCentral: ClienteCentral | undefined
           let verificado = false
 
           try {
-            // Buscar cliente por telefone no banco central
-            const cliente = await buscarClientePorTelefone(agendamento.telefone)
+            // 1º Tentar buscar por CPF (mais confiável)
+            if (agendamento.cpf) {
+              const clientePorCPF = await buscarClientePorCPF(agendamento.cpf)
+              if (clientePorCPF) {
+                clienteCentral = clientePorCPF
+                verificado = true
+                return { ...agendamento, clienteCentral, verificado }
+              }
+            }
             
-            if (cliente) {
-              clienteCentral = cliente
+            // 2º Tentar buscar por telefone (menos confiável, pode ter duplicatas)
+            if (agendamento.telefone) {
+              const clientePorTelefone = await buscarClientePorTelefone(agendamento.telefone)
+              if (clientePorTelefone) {
+                clienteCentral = clientePorTelefone
+              }
             }
             
             verificado = true

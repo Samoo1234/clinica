@@ -1,6 +1,5 @@
-import { MedicalRecord, PhysicalExam, Attachment } from '../types/database'
-
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001'
+import { MedicalRecord, PhysicalExam } from '../types/database'
+import { supabase } from '../config/supabase'
 
 export interface CreateMedicalRecordData {
   patient_id: string
@@ -23,87 +22,40 @@ export interface UpdateMedicalRecordData {
   follow_up_date?: string
 }
 
-export interface MedicalRecordsResponse {
-  success: boolean
-  data: MedicalRecord[]
-  pagination?: {
-    total: number
-    limit: number
-    offset: number
-  }
-}
-
-export interface MedicalRecordResponse {
-  success: boolean
-  data: MedicalRecord
-}
-
-export interface AttachmentsResponse {
-  success: boolean
-  data: Attachment[]
-}
-
-export interface AttachmentResponse {
-  success: boolean
-  data: Attachment
-}
-
-export interface PatientStatsResponse {
-  success: boolean
-  data: {
-    totalRecords: number
-    lastConsultation?: string
-    commonDiagnoses: Array<{ diagnosis: string, count: number }>
-  }
-}
-
 class MedicalRecordsService {
-  private async getAuthHeaders(): Promise<HeadersInit> {
-    const token = localStorage.getItem('token')
-    return {
-      'Content-Type': 'application/json',
-      'Authorization': token ? `Bearer ${token}` : ''
-    }
-  }
-
-  private async getAuthHeadersForUpload(): Promise<HeadersInit> {
-    const token = localStorage.getItem('token')
-    return {
-      'Authorization': token ? `Bearer ${token}` : ''
-    }
-  }
-
   // Create a new medical record
   async createMedicalRecord(data: CreateMedicalRecordData): Promise<MedicalRecord> {
-    const response = await fetch(`${API_BASE_URL}/api/medical-records`, {
-      method: 'POST',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(data)
-    })
+    const { data: record, error } = await supabase
+      .from('medical_records')
+      .insert({
+        ...data,
+        consultation_date: data.consultation_date || new Date().toISOString().split('T')[0]
+      })
+      .select()
+      .single()
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to create medical record')
+    if (error) {
+      console.error('Erro ao criar prontuário:', error)
+      throw new Error('Failed to create medical record')
     }
 
-    const result: MedicalRecordResponse = await response.json()
-    return result.data
+    return record
   }
 
   // Get medical record by ID
   async getMedicalRecordById(id: string): Promise<MedicalRecord> {
-    const response = await fetch(`${API_BASE_URL}/api/medical-records/${id}`, {
-      method: 'GET',
-      headers: await this.getAuthHeaders()
-    })
+    const { data, error } = await supabase
+      .from('medical_records')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get medical record')
+    if (error) {
+      console.error('Erro ao buscar prontuário:', error)
+      throw new Error('Failed to get medical record')
     }
 
-    const result: MedicalRecordResponse = await response.json()
-    return result.data
+    return data
   }
 
   // Get medical records by patient ID
@@ -116,29 +68,22 @@ class MedicalRecordsService {
     } = {}
   ): Promise<{ records: MedicalRecord[], total: number }> {
     const { limit = 50, offset = 0, orderBy = 'desc' } = options
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString(),
-      orderBy
-    })
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/patient/${patientId}?${params}`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
+    const { data, error, count } = await supabase
+      .from('medical_records')
+      .select('*', { count: 'exact' })
+      .eq('patient_id', patientId)
+      .order('consultation_date', { ascending: orderBy === 'asc' })
+      .range(offset, offset + limit - 1)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get medical records')
+    if (error) {
+      console.error('Erro ao buscar prontuários:', error)
+      throw new Error('Failed to get medical records')
     }
 
-    const result: MedicalRecordsResponse = await response.json()
     return {
-      records: result.data,
-      total: result.pagination?.total || 0
+      records: data || [],
+      total: count || 0
     }
   }
 
@@ -153,142 +98,60 @@ class MedicalRecordsService {
     } = {}
   ): Promise<{ records: MedicalRecord[], total: number }> {
     const { limit = 50, offset = 0, startDate, endDate } = options
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString()
-    })
 
-    if (startDate) params.append('startDate', startDate)
-    if (endDate) params.append('endDate', endDate)
+    let query = supabase
+      .from('medical_records')
+      .select('*', { count: 'exact' })
+      .eq('doctor_id', doctorId)
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/doctor/${doctorId}?${params}`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
+    if (startDate) query = query.gte('consultation_date', startDate)
+    if (endDate) query = query.lte('consultation_date', endDate)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get medical records')
+    const { data, error, count } = await query
+      .order('consultation_date', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Erro ao buscar prontuários:', error)
+      throw new Error('Failed to get medical records')
     }
 
-    const result: MedicalRecordsResponse = await response.json()
     return {
-      records: result.data,
-      total: result.pagination?.total || 0
+      records: data || [],
+      total: count || 0
     }
   }
 
   // Update medical record
   async updateMedicalRecord(id: string, data: UpdateMedicalRecordData): Promise<MedicalRecord> {
-    const response = await fetch(`${API_BASE_URL}/api/medical-records/${id}`, {
-      method: 'PUT',
-      headers: await this.getAuthHeaders(),
-      body: JSON.stringify(data)
-    })
+    const { data: record, error } = await supabase
+      .from('medical_records')
+      .update({
+        ...data,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', id)
+      .select()
+      .single()
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to update medical record')
+    if (error) {
+      console.error('Erro ao atualizar prontuário:', error)
+      throw new Error('Failed to update medical record')
     }
 
-    const result: MedicalRecordResponse = await response.json()
-    return result.data
+    return record
   }
 
   // Delete medical record
   async deleteMedicalRecord(id: string): Promise<void> {
-    const response = await fetch(`${API_BASE_URL}/api/medical-records/${id}`, {
-      method: 'DELETE',
-      headers: await this.getAuthHeaders()
-    })
+    const { error } = await supabase
+      .from('medical_records')
+      .delete()
+      .eq('id', id)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to delete medical record')
-    }
-  }
-
-  // Upload attachment to medical record
-  async uploadAttachment(recordId: string, file: File): Promise<Attachment> {
-    const formData = new FormData()
-    formData.append('file', file)
-
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/${recordId}/attachments`,
-      {
-        method: 'POST',
-        headers: await this.getAuthHeadersForUpload(),
-        body: formData
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to upload attachment')
-    }
-
-    const result: AttachmentResponse = await response.json()
-    return result.data
-  }
-
-  // Get attachments for medical record
-  async getAttachmentsByRecordId(recordId: string): Promise<Attachment[]> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/${recordId}/attachments`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get attachments')
-    }
-
-    const result: AttachmentsResponse = await response.json()
-    return result.data
-  }
-
-  // Get attachment download URL
-  async getAttachmentDownloadUrl(attachmentId: string): Promise<{
-    downloadUrl: string
-    filename: string
-    mimeType: string
-  }> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/attachments/${attachmentId}/download`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get download URL')
-    }
-
-    const result = await response.json()
-    return result.data
-  }
-
-  // Delete attachment
-  async deleteAttachment(attachmentId: string): Promise<void> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/attachments/${attachmentId}`,
-      {
-        method: 'DELETE',
-        headers: await this.getAuthHeaders()
-      }
-    )
-
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to delete attachment')
+    if (error) {
+      console.error('Erro ao deletar prontuário:', error)
+      throw new Error('Failed to delete medical record')
     }
   }
 
@@ -297,37 +160,33 @@ class MedicalRecordsService {
     query: string,
     options: {
       patientId?: string
-      doctorId?: string
       limit?: number
       offset?: number
     } = {}
   ): Promise<{ records: MedicalRecord[], total: number }> {
-    const { patientId, doctorId, limit = 50, offset = 0 } = options
-    const params = new URLSearchParams({
-      limit: limit.toString(),
-      offset: offset.toString()
-    })
+    const { patientId, limit = 50, offset = 0 } = options
 
-    if (patientId) params.append('patientId', patientId)
-    if (doctorId) params.append('doctorId', doctorId)
+    let queryBuilder = supabase
+      .from('medical_records')
+      .select('*', { count: 'exact' })
 
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/search/${encodeURIComponent(query)}?${params}`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
+    if (patientId) queryBuilder = queryBuilder.eq('patient_id', patientId)
+    
+    // Busca por diagnóstico ou queixa
+    queryBuilder = queryBuilder.or(`diagnosis.ilike.%${query}%,chief_complaint.ilike.%${query}%`)
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to search medical records')
+    const { data, error, count } = await queryBuilder
+      .order('consultation_date', { ascending: false })
+      .range(offset, offset + limit - 1)
+
+    if (error) {
+      console.error('Erro ao buscar prontuários:', error)
+      return { records: [], total: 0 }
     }
 
-    const result: MedicalRecordsResponse = await response.json()
     return {
-      records: result.data,
-      total: result.pagination?.total || 0
+      records: data || [],
+      total: count || 0
     }
   }
 
@@ -337,21 +196,35 @@ class MedicalRecordsService {
     lastConsultation?: string
     commonDiagnoses: Array<{ diagnosis: string, count: number }>
   }> {
-    const response = await fetch(
-      `${API_BASE_URL}/api/medical-records/patient/${patientId}/stats`,
-      {
-        method: 'GET',
-        headers: await this.getAuthHeaders()
-      }
-    )
+    const { data, error } = await supabase
+      .from('medical_records')
+      .select('consultation_date, diagnosis')
+      .eq('patient_id', patientId)
+      .order('consultation_date', { ascending: false })
 
-    if (!response.ok) {
-      const error = await response.json()
-      throw new Error(error.error || 'Failed to get patient statistics')
+    if (error) {
+      console.error('Erro ao buscar estatísticas:', error)
+      return { totalRecords: 0, commonDiagnoses: [] }
     }
 
-    const result: PatientStatsResponse = await response.json()
-    return result.data
+    const records = data || []
+    
+    // Conta diagnósticos
+    const diagnosisCount: Record<string, number> = {}
+    records.forEach(r => {
+      if (r.diagnosis) {
+        diagnosisCount[r.diagnosis] = (diagnosisCount[r.diagnosis] || 0) + 1
+      }
+    })
+
+    return {
+      totalRecords: records.length,
+      lastConsultation: records[0]?.consultation_date,
+      commonDiagnoses: Object.entries(diagnosisCount)
+        .map(([diagnosis, count]) => ({ diagnosis, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 5)
+    }
   }
 
   // Helper method to create default ophthalmology physical exam structure

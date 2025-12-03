@@ -5,7 +5,7 @@ import { ConsultationList } from '../components/consultations/ConsultationList'
 import { ConsultationDetails } from '../components/consultations/ConsultationDetails'
 import { ConsultationFilters } from '../components/consultations/ConsultationFilters'
 import { StartConsultationModal } from '../components/consultations/StartConsultationModal'
-import { consultationsService } from '../services/consultations'
+// import { consultationsService } from '../services/consultations' // Removido - usando dados do banco EXTERNO
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
 import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
@@ -30,7 +30,7 @@ export default function Consultations() {
   // Agendamentos externos
   const [agendamentosExternos, setAgendamentosExternos] = useState<AgendamentoExterno[]>([])
   const [loadingExternos, setLoadingExternos] = useState(false)
-  const [mostrarExternos, setMostrarExternos] = useState(false)
+  const [mostrarExternos, setMostrarExternos] = useState(true) // Mostrar por padrão
 
   // Stats
   const [stats, setStats] = useState<ConsultationStats>({
@@ -40,45 +40,29 @@ export default function Consultations() {
     pending: 0
   })
 
+  // Carregar agendamentos externos automaticamente ao montar
   useEffect(() => {
-    loadConsultations()
-    loadStats()
-  }, [filters])
+    loadAgendamentosExternos()
+  }, [])
 
+  // Atualizar stats quando agendamentos externos carregarem
   useEffect(() => {
-    if (mostrarExternos) {
-      loadAgendamentosExternos()
-    }
-  }, [mostrarExternos])
+    updateStatsFromExternos()
+  }, [agendamentosExternos])
 
-  const loadConsultations = async () => {
-    try {
-      setLoading(true)
-      const data = await consultationsService.getConsultations(filters)
-      setConsultations(data)
-    } catch (error: any) {
-      showError(error.message || 'Erro ao carregar consultas')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const loadStats = async () => {
-    try {
-      const statsData = await consultationsService.getConsultationStats()
-      if (statsData) {
-        setStats(statsData)
-      }
-    } catch (error) {
-      console.error('Erro ao carregar estatísticas:', error)
-      // Set default stats on error
-      setStats({
-        today: 0,
-        inProgress: 0,
-        completed: 0,
-        pending: 0
-      })
-    }
+  // Calcular estatísticas a partir dos agendamentos externos
+  const updateStatsFromExternos = () => {
+    const hoje = getLocalDateString()
+    const agendamentosHoje = agendamentosExternos.filter(a => a.data === hoje)
+    const pendentes = agendamentosExternos.filter(a => a.status === 'pendente' || a.status === 'confirmado')
+    const realizados = agendamentosExternos.filter(a => a.status === 'realizado')
+    
+    setStats({
+      today: agendamentosHoje.length,
+      inProgress: consultations.filter(c => c.status === 'in_progress').length,
+      completed: realizados.length,
+      pending: pendentes.length
+    })
   }
 
   const loadAgendamentosExternos = async () => {
@@ -99,43 +83,82 @@ export default function Consultations() {
   }
 
   const handleStartConsultation = async (appointmentId: string) => {
-    try {
-      const consultation = await consultationsService.startConsultation(appointmentId)
-      setConsultations(prev => [consultation, ...prev])
-      setSelectedConsultation(consultation)
-      setShowStartModal(false)
-      showSuccess('Consulta iniciada com sucesso')
-      loadStats()
-    } catch (error: any) {
-      showError(error.message || 'Erro ao iniciar consulta')
-    }
+    // Esta função é usada pelo modal antigo - redirecionar para usar agendamentos externos
+    showError('Use os agendamentos externos para iniciar uma consulta')
+    setShowStartModal(false)
   }
 
   const handleUpdateConsultation = async (consultationId: string, updates: Partial<Consultation>) => {
-    try {
-      const updated = await consultationsService.updateConsultation(consultationId, updates)
-      setConsultations(prev => 
-        prev.map(c => c.id === consultationId ? updated : c)
-      )
-      if (selectedConsultation?.id === consultationId) {
-        setSelectedConsultation(updated)
-      }
-      showSuccess('Consulta atualizada com sucesso')
-      loadStats()
-    } catch (error: any) {
-      showError(error.message || 'Erro ao atualizar consulta')
+    const currentConsultation = consultations.find(c => c.id === consultationId) as any
+    const updated = { ...currentConsultation, ...updates, updatedAt: new Date().toISOString() } as Consultation
+    
+    // Atualiza localmente
+    setConsultations(prev => 
+      prev.map(c => c.id === consultationId ? updated : c)
+    )
+    if (selectedConsultation?.id === consultationId) {
+      setSelectedConsultation(updated)
     }
+    
+    showSuccess('Consulta atualizada')
   }
 
   const handleCompleteConsultation = async (consultationId: string, medicalRecordData: any) => {
+    // Atualizar lista local
+    setConsultations(prev => 
+      prev.map(c => c.id === consultationId 
+        ? { ...c, status: 'completed' as const, completedAt: new Date().toISOString(), ...medicalRecordData }
+        : c
+      )
+    )
+    setSelectedConsultation(null)
+    showSuccess('Consulta finalizada!')
+    
+    // TODO: Implementar salvamento no banco EXTERNO quando necessário
+  }
+
+  // Iniciar consulta a partir de agendamento externo (funciona sem backend)
+  const handleStartExternalConsultation = async (agendamento: AgendamentoExterno) => {
     try {
-      await consultationsService.completeConsultation(consultationId, medicalRecordData)
-      loadConsultations()
-      setSelectedConsultation(null)
-      showSuccess('Consulta finalizada com sucesso')
-      loadStats()
+      // Criar consulta local a partir do agendamento externo
+      const novaConsulta: Consultation = {
+        id: `ext-${agendamento.id}`,
+        appointmentId: agendamento.id,
+        patientId: agendamento.id, // Usar ID do agendamento como referência
+        doctorId: agendamento.medico?.id || '',
+        status: 'in_progress',
+        startedAt: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        // Dados do paciente vindos do agendamento externo
+        patient: {
+          id: agendamento.id,
+          name: agendamento.nome,
+          cpf: agendamento.cpf || '',
+          birthDate: agendamento.data_nascimento || '',
+          phone: agendamento.telefone,
+          email: agendamento.email || undefined
+        },
+        // Dados do médico
+        doctor: agendamento.medico ? {
+          id: agendamento.medico.id,
+          name: agendamento.medico.nome,
+          email: '',
+          specialization: agendamento.medico.especialidade || undefined
+        } : undefined,
+        // Dados do agendamento
+        appointment: {
+          id: agendamento.id,
+          scheduledAt: `${agendamento.data}T${agendamento.horario}`,
+          duration: 30
+        }
+      }
+      
+      setConsultations(prev => [novaConsulta, ...prev])
+      setSelectedConsultation(novaConsulta)
+      showSuccess(`Consulta iniciada para ${agendamento.nome}`)
     } catch (error: any) {
-      showError(error.message || 'Erro ao finalizar consulta')
+      showError(error.message || 'Erro ao iniciar consulta')
     }
   }
 
@@ -311,10 +334,7 @@ export default function Consultations() {
                           {canStartConsultations && (
                             <button
                               disabled={!isHoje}
-                              onClick={() => {
-                                // TODO: Implementar iniciar consulta do agendamento externo
-                                alert('Funcionalidade de iniciar consulta será implementada')
-                              }}
+                              onClick={() => handleStartExternalConsultation(agendamento)}
                               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                                 isHoje
                                   ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'

@@ -5,8 +5,11 @@ import {
   ConsultationStats, 
   StartConsultationData,
   UpdateConsultationData,
-  CompleteConsultationData
+  CompleteConsultationData,
+  ExameOftalmologico
 } from '../types/consultations'
+import { medicalRecordsService } from './medical-records'
+import { supabase } from '../config/supabase'
 
 class ConsultationsService {
   /**
@@ -127,6 +130,177 @@ class ConsultationsService {
   async addNotes(id: string, notes: string): Promise<Consultation> {
     const response = await api.put(`/api/consultations/${id}/notes`, { notes }) as { data: { consultation: Consultation } }
     return response.data.consultation
+  }
+
+  /**
+   * Normaliza telefone removendo caracteres não numéricos
+   */
+  private normalizePhone(phone: string): string {
+    return phone.replace(/\D/g, '')
+  }
+
+  /**
+   * Start consultation from external appointment
+   * Cria prontuário no banco VisionCare usando médico do agendamento externo
+   */
+  async startFromExternalAppointment(agendamentoExterno: {
+    id: string
+    nome: string
+    telefone: string
+    cpf?: string
+    data: string
+    horario: string
+    medico?: { id: string; nome: string; especialidade?: string }
+  }): Promise<Consultation & { prontuarioId?: string }> {
+    // Médico vem do agendamento externo
+    const doctorId = agendamentoExterno.medico?.id
+    console.log('👨‍⚕️ Médico do agendamento:', agendamentoExterno.medico?.nome, '| ID:', doctorId)
+    
+    // Normalizar telefone para busca
+    const telefoneNormalizado = this.normalizePhone(agendamentoExterno.telefone)
+    console.log('📱 Telefone normalizado:', telefoneNormalizado)
+    
+    // Buscar paciente no banco VisionCare pelo CPF primeiro, depois telefone
+    let patientId: string | undefined
+    
+    try {
+      // Buscar todos os pacientes e comparar telefone normalizado
+      const { data: patients } = await supabase
+        .from('patients')
+        .select('id, name, phone, cpf')
+      
+      if (patients) {
+        // Primeiro tenta por CPF (mais confiável)
+        if (agendamentoExterno.cpf) {
+          const cpfNormalizado = agendamentoExterno.cpf.replace(/\D/g, '')
+          const pacientePorCpf = patients.find(p => p.cpf?.replace(/\D/g, '') === cpfNormalizado)
+          if (pacientePorCpf) {
+            patientId = pacientePorCpf.id
+            console.log('✅ Paciente encontrado por CPF:', pacientePorCpf.name)
+          }
+        }
+        
+        // Se não encontrou por CPF, tenta por telefone
+        if (!patientId) {
+          const pacientePorTel = patients.find(p => 
+            this.normalizePhone(p.phone || '') === telefoneNormalizado
+          )
+          if (pacientePorTel) {
+            patientId = pacientePorTel.id
+            console.log('✅ Paciente encontrado por telefone:', pacientePorTel.name)
+          }
+        }
+      }
+      
+      if (!patientId) {
+        console.warn('⚠️ Paciente não encontrado no VisionCare')
+      }
+    } catch (error) {
+      console.error('❌ Erro ao buscar paciente:', error)
+    }
+
+    // Criar prontuário no banco VisionCare
+    let prontuarioId: string | undefined
+    if (patientId && doctorId) {
+      try {
+        const prontuario = await medicalRecordsService.createMedicalRecord({
+          patient_id: patientId,
+          doctor_id: doctorId,
+          consultation_date: agendamentoExterno.data
+        })
+        prontuarioId = prontuario.id
+        console.log('✅ Prontuário criado no VisionCare:', prontuarioId)
+      } catch (error) {
+        console.error('❌ Erro ao criar prontuário:', error)
+      }
+    } else {
+      if (!patientId) console.warn('⚠️ Paciente não encontrado - cadastre o paciente primeiro')
+      if (!doctorId) console.warn('⚠️ Médico não definido no agendamento')
+    }
+
+    // Criar objeto de consulta
+    const consultation: Consultation & { prontuarioId?: string } = {
+      id: prontuarioId || `local-${Date.now()}`,
+      prontuarioId,
+      appointmentId: agendamentoExterno.id,
+      patientId: patientId || agendamentoExterno.telefone,
+      doctorId: doctorId || 'default',
+      status: 'in_progress',
+      startedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      patient: {
+        id: patientId || agendamentoExterno.telefone,
+        name: agendamentoExterno.nome,
+        cpf: agendamentoExterno.cpf || '',
+        birthDate: '',
+        phone: agendamentoExterno.telefone
+      },
+      doctor: agendamentoExterno.medico ? {
+        id: doctorId || agendamentoExterno.medico.id,
+        name: agendamentoExterno.medico.nome,
+        email: '',
+        specialization: agendamentoExterno.medico.especialidade
+      } : undefined,
+      appointment: {
+        id: agendamentoExterno.id,
+        scheduledAt: `${agendamentoExterno.data}T${agendamentoExterno.horario}`,
+        duration: 30
+      }
+    }
+    
+    return consultation
+  }
+
+  /**
+   * Atualizar exame oftalmológico no prontuário
+   */
+  async updateExameOftalmologico(prontuarioId: string, exame: ExameOftalmologico): Promise<void> {
+    try {
+      await medicalRecordsService.updateMedicalRecord(prontuarioId, {
+        physical_exam: exame
+      })
+      console.log('✅ Exame oftalmológico salvo no prontuário')
+    } catch (error) {
+      console.error('Erro ao salvar exame:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Finalizar consulta e salvar diagnóstico/prescrição no prontuário
+   */
+  async finalizarConsulta(
+    prontuarioId: string, 
+    dados: {
+      diagnosis: string
+      prescription?: string
+      notes?: string
+      followUpDate?: string
+      exame?: ExameOftalmologico
+    }
+  ): Promise<void> {
+    try {
+      await medicalRecordsService.updateMedicalRecord(prontuarioId, {
+        diagnosis: dados.diagnosis,
+        prescription: dados.prescription,
+        chief_complaint: dados.notes,
+        follow_up_date: dados.followUpDate,
+        physical_exam: dados.exame
+      })
+      console.log('✅ Consulta finalizada e prontuário salvo')
+    } catch (error) {
+      console.error('Erro ao finalizar consulta:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Buscar histórico de prontuários do paciente
+   */
+  async getHistoricoPaciente(patientId: string): Promise<any[]> {
+    const { records } = await medicalRecordsService.getMedicalRecordsByPatientId(patientId)
+    return records
   }
 }
 

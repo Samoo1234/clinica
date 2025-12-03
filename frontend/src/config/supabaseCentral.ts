@@ -120,6 +120,7 @@ export interface AtualizarClienteCentralDTO {
  */
 
 // Buscar cliente por telefone
+// NOTA: Telefone pode ter duplicatas, então usa limit(1) em vez de maybeSingle
 export const buscarClientePorTelefone = async (telefone: string): Promise<ClienteCentral | null> => {
   const telefoneLimpo = telefone.replace(/\D/g, '');
   
@@ -127,10 +128,27 @@ export const buscarClientePorTelefone = async (telefone: string): Promise<Client
     .from('clientes')
     .select('*')
     .eq('telefone', telefoneLimpo)
-    .maybeSingle(); // maybeSingle não lança erro se não encontrar
+    .order('created_at', { ascending: false }) // Pega o mais recente em caso de duplicatas
+    .limit(1);
 
   if (error) {
     console.error('Erro ao buscar cliente por telefone:', error);
+    throw error;
+  }
+
+  return data && data.length > 0 ? data[0] : null;
+};
+
+// Buscar cliente por código (ex: SJM-0002)
+export const buscarClientePorCodigo = async (codigo: string): Promise<ClienteCentral | null> => {
+  const { data, error } = await supabaseCentral
+    .from('clientes')
+    .select('*')
+    .eq('codigo', codigo)
+    .maybeSingle();
+
+  if (error) {
+    console.error('Erro ao buscar cliente por código:', error);
     throw error;
   }
 
@@ -172,10 +190,59 @@ export const buscarClientePorId = async (id: string): Promise<ClienteCentral | n
 };
 
 // Criar cliente (pode ser parcial ou completo)
+// Verifica duplicatas por CPF ou telefone antes de criar
 export const criarClienteCentral = async (dados: CriarClienteCentralDTO): Promise<ClienteCentral> => {
+  const telefoneLimpo = dados.telefone.replace(/\D/g, '');
+  const cpfLimpo = dados.cpf?.replace(/\D/g, '');
+
+  // Verificar se já existe cliente com este CPF
+  if (cpfLimpo) {
+    const clienteExistenteCPF = await buscarClientePorCPF(cpfLimpo);
+    if (clienteExistenteCPF) {
+      console.log('Cliente já existe com este CPF, atualizando...', clienteExistenteCPF.id);
+      return atualizarClienteCentral(clienteExistenteCPF.id, {
+        nome: dados.nome,
+        telefone: telefoneLimpo,
+        cpf: cpfLimpo,
+        rg: dados.rg,
+        email: dados.email,
+        data_nascimento: dados.data_nascimento,
+        sexo: dados.sexo,
+        endereco: dados.endereco,
+        cidade: dados.cidade,
+        nome_pai: dados.nome_pai,
+        nome_mae: dados.nome_mae,
+        observacoes: dados.observacoes,
+        cadastro_completo: dados.cadastro_completo
+      });
+    }
+  }
+
+  // Verificar se já existe cliente com este telefone
+  const clienteExistenteTelefone = await buscarClientePorTelefone(telefoneLimpo);
+  if (clienteExistenteTelefone) {
+    console.log('Cliente já existe com este telefone, atualizando...', clienteExistenteTelefone.id);
+    return atualizarClienteCentral(clienteExistenteTelefone.id, {
+      nome: dados.nome,
+      telefone: telefoneLimpo,
+      cpf: cpfLimpo,
+      rg: dados.rg,
+      email: dados.email,
+      data_nascimento: dados.data_nascimento,
+      sexo: dados.sexo,
+      endereco: dados.endereco,
+      cidade: dados.cidade,
+      nome_pai: dados.nome_pai,
+      nome_mae: dados.nome_mae,
+      observacoes: dados.observacoes,
+      cadastro_completo: dados.cadastro_completo
+    });
+  }
+
+  // Cliente não existe, criar novo
   const clienteData: any = {
     nome: dados.nome,
-    telefone: dados.telefone.replace(/\D/g, ''), // Limpar telefone
+    telefone: telefoneLimpo,
     cadastro_completo: dados.cadastro_completo ?? false,
     active: true,
     created_at: new Date().toISOString(),
@@ -183,7 +250,7 @@ export const criarClienteCentral = async (dados: CriarClienteCentralDTO): Promis
   };
 
   // Adicionar campos opcionais se fornecidos
-  if (dados.cpf) clienteData.cpf = dados.cpf.replace(/\D/g, '');
+  if (cpfLimpo) clienteData.cpf = cpfLimpo;
   if (dados.rg) clienteData.rg = dados.rg;
   if (dados.email) clienteData.email = dados.email;
   if (dados.data_nascimento) clienteData.data_nascimento = dados.data_nascimento;
@@ -327,6 +394,151 @@ export const gerarCodigoCliente = async (cidade: string): Promise<string> => {
   }
 
   return `${iniciaisCidade}-${numeroSequencial.toString().padStart(4, '0')}`;
+};
+
+// ========================================
+// PRONTUÁRIOS MÉDICOS (medical_records)
+// ========================================
+
+// Interface do prontuário médico
+export interface ProntuarioMedico {
+  id: string;
+  patient_id: string;
+  doctor_id: string;
+  consultation_date: string;
+  chief_complaint?: string;       // Queixa principal
+  anamnesis?: string;             // Anamnese
+  physical_exam?: {               // Exame oftalmológico
+    acuidadeOD?: string;
+    acuidadeOE?: string;
+    acuidadeAO?: string;
+    pressaoOD?: number;
+    pressaoOE?: number;
+    refracaoOD?: {
+      esferico?: string;
+      cilindrico?: string;
+      eixo?: number;
+      adicao?: string;
+      dnp?: number;
+    };
+    refracaoOE?: {
+      esferico?: string;
+      cilindrico?: string;
+      eixo?: number;
+      adicao?: string;
+      dnp?: number;
+    };
+    biomicroscopia?: string;
+    fundoscopia?: string;
+    motilidadeOcular?: string;
+    reflexosPupilares?: string;
+  };
+  diagnosis?: string;
+  prescription?: string;
+  follow_up_date?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+// Interface para criar prontuário
+export interface CriarProntuarioDTO {
+  patient_id: string;
+  doctor_id: string;
+  consultation_date?: string;
+  chief_complaint?: string;
+  anamnesis?: string;
+  physical_exam?: ProntuarioMedico['physical_exam'];
+  diagnosis?: string;
+  prescription?: string;
+  follow_up_date?: string;
+}
+
+// Criar prontuário médico
+export const criarProntuario = async (dados: CriarProntuarioDTO): Promise<ProntuarioMedico> => {
+  const { data, error } = await supabaseCentral
+    .from('medical_records')
+    .insert({
+      ...dados,
+      consultation_date: dados.consultation_date || new Date().toISOString().split('T')[0]
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erro ao criar prontuário:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+// Atualizar prontuário médico
+export const atualizarProntuario = async (id: string, dados: Partial<CriarProntuarioDTO>): Promise<ProntuarioMedico> => {
+  const { data, error } = await supabaseCentral
+    .from('medical_records')
+    .update({
+      ...dados,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Erro ao atualizar prontuário:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+// Buscar prontuário por ID
+export const buscarProntuarioPorId = async (id: string): Promise<ProntuarioMedico | null> => {
+  const { data, error } = await supabaseCentral
+    .from('medical_records')
+    .select('*')
+    .eq('id', id)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') return null;
+    console.error('Erro ao buscar prontuário:', error);
+    throw error;
+  }
+
+  return data;
+};
+
+// Buscar prontuários do paciente
+export const buscarProntuariosPaciente = async (patientId: string): Promise<ProntuarioMedico[]> => {
+  const { data, error } = await supabaseCentral
+    .from('medical_records')
+    .select('*')
+    .eq('patient_id', patientId)
+    .order('consultation_date', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar prontuários do paciente:', error);
+    throw error;
+  }
+
+  return data || [];
+};
+
+// Buscar prontuários por data
+export const buscarProntuariosPorData = async (data: string): Promise<ProntuarioMedico[]> => {
+  const { data: prontuarios, error } = await supabaseCentral
+    .from('medical_records')
+    .select('*')
+    .eq('consultation_date', data)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Erro ao buscar prontuários por data:', error);
+    throw error;
+  }
+
+  return prontuarios || [];
 };
 
 export default supabaseCentral
