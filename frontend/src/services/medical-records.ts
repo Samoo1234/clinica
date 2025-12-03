@@ -263,6 +263,93 @@ class MedicalRecordsService {
     
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i]
   }
+
+  // ==================== MÉTODOS DE ANEXOS ====================
+
+  // Get attachments by medical record ID
+  async getAttachmentsByRecordId(recordId: string): Promise<any[]> {
+    const { data, error } = await supabase
+      .from('attachments')
+      .select('*')
+      .eq('record_id', recordId)
+      .order('created_at', { ascending: false })
+
+    if (error) {
+      console.error('Erro ao buscar anexos:', error)
+      return []
+    }
+
+    return data || []
+  }
+
+  // Upload attachment to storage and create record
+  async uploadAttachment(recordId: string, file: File): Promise<any> {
+    const fileExt = file.name.split('.').pop()
+    const fileName = `${recordId}/${Date.now()}.${fileExt}`
+    const filePath = `medical-records/${fileName}`
+
+    // Upload to Supabase Storage
+    const { error: uploadError } = await supabase.storage
+      .from('attachments')
+      .upload(filePath, file)
+
+    if (uploadError) {
+      console.error('Erro ao fazer upload:', uploadError)
+      throw new Error('Failed to upload attachment')
+    }
+
+    // Create attachment record
+    const { data, error } = await supabase
+      .from('attachments')
+      .insert({
+        record_id: recordId,
+        filename: file.name,
+        file_path: filePath,
+        mime_type: file.type,
+        file_size: file.size
+      })
+      .select()
+      .single()
+
+    if (error) {
+      console.error('Erro ao salvar anexo:', error)
+      throw new Error('Failed to save attachment record')
+    }
+
+    return data
+  }
+
+  // Get download URL for attachment
+  async getAttachmentDownloadUrl(filePath: string): Promise<string> {
+    const { data } = await supabase.storage
+      .from('attachments')
+      .createSignedUrl(filePath, 3600) // 1 hour expiry
+
+    return data?.signedUrl || ''
+  }
+
+  // Delete attachment
+  async deleteAttachment(attachmentId: string, filePath: string): Promise<void> {
+    // Delete from storage
+    const { error: storageError } = await supabase.storage
+      .from('attachments')
+      .remove([filePath])
+
+    if (storageError) {
+      console.error('Erro ao deletar arquivo:', storageError)
+    }
+
+    // Delete record
+    const { error } = await supabase
+      .from('attachments')
+      .delete()
+      .eq('id', attachmentId)
+
+    if (error) {
+      console.error('Erro ao deletar anexo:', error)
+      throw new Error('Failed to delete attachment')
+    }
+  }
 }
 
 export const medicalRecordsService = new MedicalRecordsService()

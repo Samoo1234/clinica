@@ -38,6 +38,9 @@ function getSupabaseExterno(): SupabaseClient {
   return supabaseExternoInstance
 }
 
+// Exporta o cliente para uso em outros serviços
+export const supabaseExterno = getSupabaseExterno()
+
 // Tipos
 export interface AgendamentoExterno {
   id: string

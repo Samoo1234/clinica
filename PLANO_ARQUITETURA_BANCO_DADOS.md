@@ -236,16 +236,32 @@ SELECT COUNT(*) FROM medical_records WHERE patient_id IS NULL;
 
 ---
 
-## 📁 ARQUIVOS A MODIFICAR
+## 📁 ARQUIVOS MODIFICADOS
 
 ### Frontend:
-| Arquivo | Ação |
-|---------|------|
-| `config/supabaseCentral.ts` | ✏️ Melhorar busca (CPF > codigo > telefone) |
-| `pages/AppointmentsExternal.tsx` | ✏️ Usar nova lógica de verificação |
-| `services/patient-central.ts` | ✏️ Adicionar busca por codigo |
-| `services/patients.ts` | 🗑️ Deprecar (usa API REST) |
-| `services/medical-records.ts` | ✏️ Apontar para banco correto |
+| Arquivo | Status | Descrição |
+|---------|--------|-----------|
+| `config/supabaseCentral.ts` | ✅ Concluído | Busca CPF > codigo > telefone |
+| `pages/AppointmentsExternal.tsx` | ✅ Concluído | Nova lógica de verificação |
+| `pages/Consultations.tsx` | ✅ Concluído | Integração com banco EXTERNO |
+| `services/patient-sync.ts` | ✅ **NOVO** | Sincronização LOCAL ↔ CENTRAL |
+| `services/agendamentos-externos.ts` | ✅ Concluído | Exporta supabaseExterno |
+| `services/medical-records.ts` | ✅ OK | Já usa banco LOCAL |
+
+### Fluxo de Persistência Implementado:
+```
+1. Consulta iniciada (agendamento EXTERNO)
+         ↓
+2. Buscar histórico por CPF (banco LOCAL)
+         ↓
+3. Consulta finalizada
+         ↓
+4. Sincronizar paciente (LOCAL) ← por CPF
+         ↓
+5. Salvar prontuário (LOCAL.medical_records)
+         ↓
+6. Atualizar status (EXTERNO.agendamentos → "realizado")
+```
 
 ### Banco de Dados:
 | Banco | Tabela | Ação |

@@ -9,6 +9,7 @@ import { StartConsultationModal } from '../components/consultations/StartConsult
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
 import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
+import { patientSyncService } from '../services/patient-sync'
 import { getLocalDateString, isToday, isTodayOrFuture, formatDateBR } from '../utils/date'
 
 export default function Consultations() {
@@ -104,22 +105,70 @@ export default function Consultations() {
   }
 
   const handleCompleteConsultation = async (consultationId: string, medicalRecordData: any) => {
-    // Atualizar lista local
-    setConsultations(prev => 
-      prev.map(c => c.id === consultationId 
-        ? { ...c, status: 'completed' as const, completedAt: new Date().toISOString(), ...medicalRecordData }
-        : c
-      )
-    )
-    setSelectedConsultation(null)
-    showSuccess('Consulta finalizada!')
+    // Buscar a consulta atual
+    const consulta = consultations.find(c => c.id === consultationId)
     
-    // TODO: Implementar salvamento no banco EXTERNO quando necessário
+    if (!consulta?.patient?.cpf) {
+      showError('CPF do paciente é obrigatório para finalizar a consulta')
+      return
+    }
+
+    try {
+      // Usar o serviço de sincronização para persistir os dados
+      const resultado = await patientSyncService.finalizarConsulta({
+        paciente: {
+          cpf: consulta.patient.cpf,
+          nome: consulta.patient.name,
+          telefone: consulta.patient.phone,
+          email: consulta.patient.email,
+          data_nascimento: consulta.patient.birthDate
+        },
+        doctor_id: user?.id || consulta.doctorId,
+        agendamento_id: consulta.appointmentId,
+        chief_complaint: consulta.queixaPrincipal || medicalRecordData.notes,
+        physical_exam: consulta.exameOftalmologico || {},
+        diagnosis: medicalRecordData.diagnosis,
+        prescription: medicalRecordData.prescription,
+        follow_up_date: medicalRecordData.followUpDate
+      })
+
+      if (!resultado.success) {
+        throw new Error(resultado.error || 'Erro ao finalizar consulta')
+      }
+
+      // Atualizar lista local
+      setConsultations(prev => 
+        prev.map(c => c.id === consultationId 
+          ? { ...c, status: 'completed' as const, completedAt: new Date().toISOString(), ...medicalRecordData }
+          : c
+        )
+      )
+      setSelectedConsultation(null)
+      
+      // Recarregar agendamentos para atualizar status
+      loadAgendamentosExternos()
+      
+      showSuccess('Consulta finalizada e prontuário salvo com sucesso!')
+
+    } catch (error: any) {
+      console.error('Erro ao finalizar consulta:', error)
+      showError(error.message || 'Erro ao finalizar consulta')
+    }
   }
 
   // Iniciar consulta a partir de agendamento externo (funciona sem backend)
   const handleStartExternalConsultation = async (agendamento: AgendamentoExterno) => {
     try {
+      // Verificar se tem CPF para buscar histórico
+      let historicoInfo = ''
+      if (agendamento.cpf) {
+        const historico = await patientSyncService.buscarHistoricoMedicoPorCPF(agendamento.cpf)
+        if (historico.totalConsultas > 0) {
+          historicoInfo = ` (${historico.totalConsultas} consulta(s) anterior(es))`
+          console.log('📋 Histórico encontrado:', historico)
+        }
+      }
+
       // Criar consulta local a partir do agendamento externo
       const novaConsulta: Consultation = {
         id: `ext-${agendamento.id}`,
@@ -156,7 +205,7 @@ export default function Consultations() {
       
       setConsultations(prev => [novaConsulta, ...prev])
       setSelectedConsultation(novaConsulta)
-      showSuccess(`Consulta iniciada para ${agendamento.nome}`)
+      showSuccess(`Consulta iniciada para ${agendamento.nome}${historicoInfo}`)
     } catch (error: any) {
       showError(error.message || 'Erro ao iniciar consulta')
     }
