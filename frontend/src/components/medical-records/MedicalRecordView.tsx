@@ -51,11 +51,11 @@ export function MedicalRecordView({ record, patient, onEdit, onBack }: MedicalRe
 
   const handleDownload = async (attachment: Attachment) => {
     try {
-      const { downloadUrl, filename } = await medicalRecordsService.getAttachmentDownloadUrl(attachment.id)
+      const downloadUrl = await medicalRecordsService.getAttachmentDownloadUrl(attachment.file_path)
       
       const link = document.createElement('a')
       link.href = downloadUrl
-      link.download = filename
+      link.download = attachment.filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)

@@ -89,12 +89,12 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
 
   const handleDownload = async (attachment: Attachment) => {
     try {
-      const { downloadUrl, filename } = await medicalRecordsService.getAttachmentDownloadUrl(attachment.id)
+      const downloadUrl = await medicalRecordsService.getAttachmentDownloadUrl(attachment.file_path)
       
       // Create temporary link and trigger download
       const link = document.createElement('a')
       link.href = downloadUrl
-      link.download = filename
+      link.download = attachment.filename
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -109,7 +109,7 @@ export function AttachmentUpload({ recordId }: AttachmentUploadProps) {
     if (!confirm('Tem certeza que deseja excluir este anexo?')) return
 
     try {
-      await medicalRecordsService.deleteAttachment(attachment.id)
+      await medicalRecordsService.deleteAttachment(attachment.id, attachment.file_path)
       setAttachments(prev => prev.filter(a => a.id !== attachment.id))
       showToast('success', 'Anexo excluído com sucesso')
     } catch (error) {
