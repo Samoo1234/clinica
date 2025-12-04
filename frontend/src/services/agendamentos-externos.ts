@@ -360,6 +360,29 @@ export async function buscarClientePorCPF(cpf: string): Promise<ClienteExterno |
 }
 
 /**
+ * Busca cliente por telefone no banco EXTERNO
+ */
+export async function buscarClientePorTelefoneExterno(telefone: string): Promise<ClienteExterno | null> {
+  try {
+    const supabase = getSupabaseExterno()
+    const telefoneLimpo = telefone.replace(/\D/g, '')
+    
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .eq('telefone', telefoneLimpo)
+      .order('created_at', { ascending: false })
+      .limit(1)
+
+    if (error) throw error
+    return data && data.length > 0 ? data[0] as ClienteExterno : null
+  } catch (error) {
+    console.error('Erro ao buscar cliente por telefone no banco externo:', error)
+    return null
+  }
+}
+
+/**
  * Cria um novo cliente no sistema externo via API do backend
  */
 export async function criarClienteExterno(clienteData: Partial<ClienteExterno>): Promise<ClienteExterno> {

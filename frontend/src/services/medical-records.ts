@@ -1,5 +1,6 @@
 import { MedicalRecord, PhysicalExam } from '../types/database'
 import { supabase } from '../config/supabase'
+import { Patient } from './patient-central'
 
 export interface CreateMedicalRecordData {
   patient_id: string
@@ -24,6 +25,7 @@ export interface UpdateMedicalRecordData {
 
 class MedicalRecordsService {
   // Create a new medical record
+  // Nota: FK para patients foi removida, permitindo referenciar pacientes do banco central
   async createMedicalRecord(data: CreateMedicalRecordData): Promise<MedicalRecord> {
     const { data: record, error } = await supabase
       .from('medical_records')

@@ -9,7 +9,7 @@ import {
   ExameOftalmologico
 } from '../types/consultations'
 import { medicalRecordsService } from './medical-records'
-import { supabase } from '../config/supabase'
+import { buscarClientePorCPF, buscarClientePorTelefone } from '../config/supabaseCentral'
 
 class ConsultationsService {
   /**
@@ -141,7 +141,7 @@ class ConsultationsService {
 
   /**
    * Start consultation from external appointment
-   * Cria prontuário no banco VisionCare usando médico do agendamento externo
+   * Busca cliente no banco CENTRAL e cria prontuário
    */
   async startFromExternalAppointment(agendamentoExterno: {
     id: string
@@ -156,50 +156,44 @@ class ConsultationsService {
     const doctorId = agendamentoExterno.medico?.id
     console.log('👨‍⚕️ Médico do agendamento:', agendamentoExterno.medico?.nome, '| ID:', doctorId)
     
-    // Normalizar telefone para busca
-    const telefoneNormalizado = this.normalizePhone(agendamentoExterno.telefone)
-    console.log('📱 Telefone normalizado:', telefoneNormalizado)
-    
-    // Buscar paciente no banco VisionCare pelo CPF primeiro, depois telefone
+    // Buscar cliente no banco CENTRAL pelo CPF primeiro, depois telefone
     let patientId: string | undefined
+    let clienteNome: string = agendamentoExterno.nome
     
     try {
-      // Buscar todos os pacientes e comparar telefone normalizado
-      const { data: patients } = await supabase
-        .from('patients')
-        .select('id, name, phone, cpf')
-      
-      if (patients) {
-        // Primeiro tenta por CPF (mais confiável)
-        if (agendamentoExterno.cpf) {
-          const cpfNormalizado = agendamentoExterno.cpf.replace(/\D/g, '')
-          const pacientePorCpf = patients.find(p => p.cpf?.replace(/\D/g, '') === cpfNormalizado)
-          if (pacientePorCpf) {
-            patientId = pacientePorCpf.id
-            console.log('✅ Paciente encontrado por CPF:', pacientePorCpf.name)
-          }
-        }
-        
-        // Se não encontrou por CPF, tenta por telefone
-        if (!patientId) {
-          const pacientePorTel = patients.find(p => 
-            this.normalizePhone(p.phone || '') === telefoneNormalizado
-          )
-          if (pacientePorTel) {
-            patientId = pacientePorTel.id
-            console.log('✅ Paciente encontrado por telefone:', pacientePorTel.name)
-          }
+      // Primeiro tenta por CPF (mais confiável)
+      if (agendamentoExterno.cpf) {
+        const cpfNormalizado = agendamentoExterno.cpf.replace(/\D/g, '')
+        const clientePorCpf = await buscarClientePorCPF(cpfNormalizado)
+        if (clientePorCpf) {
+          patientId = clientePorCpf.id
+          clienteNome = clientePorCpf.nome
+          console.log('✅ Cliente encontrado no banco CENTRAL por CPF:', clientePorCpf.nome)
         }
       }
       
+      // Se não encontrou por CPF, tenta por telefone
+      if (!patientId && agendamentoExterno.telefone) {
+        const telefoneNormalizado = this.normalizePhone(agendamentoExterno.telefone)
+        const clientePorTel = await buscarClientePorTelefone(telefoneNormalizado)
+        if (clientePorTel) {
+          patientId = clientePorTel.id
+          clienteNome = clientePorTel.nome
+          console.log('✅ Cliente encontrado no banco CENTRAL por telefone:', clientePorTel.nome)
+        }
+      }
+      
+      // Se não encontrou, usar ID do agendamento como fallback
       if (!patientId) {
-        console.warn('⚠️ Paciente não encontrado no VisionCare')
+        patientId = agendamentoExterno.id
+        console.warn('⚠️ Cliente não encontrado no banco CENTRAL, usando ID do agendamento')
       }
     } catch (error) {
-      console.error('❌ Erro ao buscar paciente:', error)
+      console.error('❌ Erro ao buscar cliente no banco CENTRAL:', error)
+      patientId = agendamentoExterno.id
     }
 
-    // Criar prontuário no banco VisionCare
+    // Criar prontuário no banco LOCAL (medical_records)
     let prontuarioId: string | undefined
     if (patientId && doctorId) {
       try {
@@ -209,12 +203,11 @@ class ConsultationsService {
           consultation_date: agendamentoExterno.data
         })
         prontuarioId = prontuario.id
-        console.log('✅ Prontuário criado no VisionCare:', prontuarioId)
+        console.log('✅ Prontuário criado:', prontuarioId)
       } catch (error) {
         console.error('❌ Erro ao criar prontuário:', error)
       }
     } else {
-      if (!patientId) console.warn('⚠️ Paciente não encontrado - cadastre o paciente primeiro')
       if (!doctorId) console.warn('⚠️ Médico não definido no agendamento')
     }
 

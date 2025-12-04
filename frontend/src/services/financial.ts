@@ -1,19 +1,4 @@
-import { supabase } from '../lib/supabase';
-
-// Helper function to get auth headers
-const getAuthHeaders = () => {
-  const token = localStorage.getItem('token');
-  return {
-    'Authorization': `Bearer ${token}`,
-    'Content-Type': 'application/json'
-  };
-};
-
-// Helper function to get simple auth header
-const getAuthHeader = () => {
-  const token = localStorage.getItem('token');
-  return `Bearer ${token}`;
-};
+import { supabase } from '../config/supabase';
 
 export interface Payment {
   id: string;
@@ -92,83 +77,66 @@ export interface FinancialDashboard {
 }
 
 class FinancialService {
-  private baseUrl = `${import.meta.env.VITE_API_URL || 'http://localhost:3001'}/api/financial`;
-
-  // Payment management
+  // Payment management - usando Supabase diretamente
   async createPayment(paymentData: Omit<Payment, 'id' | 'created_at' | 'updated_at'>): Promise<Payment> {
-    const response = await fetch(`${this.baseUrl}/payments`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      },
-      body: JSON.stringify(paymentData)
-    });
+    const { data, error } = await supabase
+      .from('payments')
+      .insert(paymentData)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error('Failed to create payment');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to create payment: ${error.message}`);
+    return data;
   }
 
   async getPayment(id: string): Promise<PaymentWithDetails> {
-    const response = await fetch(`${this.baseUrl}/payments/${id}`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('id', id)
+      .single();
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch payment');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to fetch payment: ${error.message}`);
+    return data;
   }
 
   async updatePayment(id: string, updates: Partial<Payment>): Promise<Payment> {
-    const response = await fetch(`${this.baseUrl}/payments/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      },
-      body: JSON.stringify(updates)
-    });
+    const { data, error } = await supabase
+      .from('payments')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error('Failed to update payment');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to update payment: ${error.message}`);
+    return data;
   }
 
   async getPaymentsByAppointment(appointmentId: string): Promise<Payment[]> {
-    const response = await fetch(`${this.baseUrl}/appointments/${appointmentId}/payments`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('appointment_id', appointmentId);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch appointment payments');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to fetch appointment payments: ${error.message}`);
+    return data || [];
   }
 
   async getPaymentsByPatient(patientId: string): Promise<PaymentWithDetails[]> {
-    const response = await fetch(`${this.baseUrl}/patients/${patientId}/payments`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    // Busca payments através de appointments do paciente
+    const { data, error } = await supabase
+      .from('payments')
+      .select(`
+        *,
+        appointments!inner(patient_id)
+      `)
+      .eq('appointments.patient_id', patientId);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch patient payments');
+    if (error) {
+      console.warn('Failed to fetch patient payments:', error.message);
+      return [];
     }
-
-    return response.json();
+    return data || [];
   }
 
   async processPayment(paymentId: string, data: {
@@ -176,172 +144,186 @@ class FinancialService {
     transaction_id?: string;
     notes?: string;
   }): Promise<{ message: string; payment_id: string }> {
-    const response = await fetch(`${this.baseUrl}/payments/${paymentId}/process`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      },
-      body: JSON.stringify(data)
-    });
+    const { error } = await supabase
+      .from('payments')
+      .update({
+        payment_method: data.payment_method,
+        transaction_id: data.transaction_id,
+        notes: data.notes,
+        status: 'paid',
+        payment_date: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', paymentId);
 
-    if (!response.ok) {
-      throw new Error('Failed to process payment');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to process payment: ${error.message}`);
+    return { message: 'Payment processed', payment_id: paymentId };
   }
 
   // Service prices
   async getServicePrices(): Promise<ServicePrice[]> {
-    const response = await fetch(`${this.baseUrl}/service-prices`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const { data, error } = await supabase
+      .from('service_prices')
+      .select('*')
+      .eq('active', true);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch service prices');
+    if (error) {
+      console.warn('Failed to fetch service prices:', error.message);
+      return [];
     }
-
-    return response.json();
+    return data || [];
   }
 
   async createServicePrice(serviceData: Omit<ServicePrice, 'id' | 'created_at' | 'updated_at'>): Promise<ServicePrice> {
-    const response = await fetch(`${this.baseUrl}/service-prices`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      },
-      body: JSON.stringify(serviceData)
-    });
+    const { data, error } = await supabase
+      .from('service_prices')
+      .insert(serviceData)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error('Failed to create service price');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to create service price: ${error.message}`);
+    return data;
   }
 
   async updateServicePrice(id: string, updates: Partial<ServicePrice>): Promise<ServicePrice> {
-    const response = await fetch(`${this.baseUrl}/service-prices/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      },
-      body: JSON.stringify(updates)
-    });
+    const { data, error } = await supabase
+      .from('service_prices')
+      .update({ ...updates, updated_at: new Date().toISOString() })
+      .eq('id', id)
+      .select()
+      .single();
 
-    if (!response.ok) {
-      throw new Error('Failed to update service price');
-    }
-
-    return response.json();
+    if (error) throw new Error(`Failed to update service price: ${error.message}`);
+    return data;
   }
 
   // Financial reports
   async getAccountsReceivable(): Promise<PaymentWithDetails[]> {
-    const response = await fetch(`${this.baseUrl}/reports/accounts-receivable`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending');
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch accounts receivable');
+    if (error) {
+      console.warn('Failed to fetch accounts receivable:', error.message);
+      return [];
     }
-
-    return response.json();
+    return data || [];
   }
 
   async getOverduePayments(): Promise<PaymentWithDetails[]> {
-    const response = await fetch(`${this.baseUrl}/reports/overdue-payments`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const today = new Date().toISOString().split('T')[0];
+    const { data, error } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('due_date', today);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch overdue payments');
+    if (error) {
+      console.warn('Failed to fetch overdue payments:', error.message);
+      return [];
     }
-
-    return response.json();
+    return data || [];
   }
 
   async getFinancialSummary(startDate: string, endDate: string): Promise<FinancialSummary> {
-    const response = await fetch(`${this.baseUrl}/reports/financial-summary?start_date=${startDate}&end_date=${endDate}`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const { data: payments, error } = await supabase
+      .from('payments')
+      .select('*')
+      .gte('created_at', startDate)
+      .lte('created_at', endDate);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch financial summary');
+    if (error) {
+      console.warn('Failed to fetch financial summary:', error.message);
     }
 
-    return response.json();
+    const paidPayments = (payments || []).filter(p => p.status === 'paid');
+    const pendingPayments = (payments || []).filter(p => p.status === 'pending');
+
+    return {
+      totalIncome: paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      totalExpenses: 0,
+      netIncome: paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      totalPending: pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      period: { startDate, endDate }
+    };
   }
 
   async getFinancialDashboard(startDate?: string, endDate?: string): Promise<FinancialDashboard> {
-    const params = new URLSearchParams();
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
+    const today = new Date().toISOString().split('T')[0];
+    const start = startDate || new Date(new Date().setMonth(new Date().getMonth() - 1)).toISOString().split('T')[0];
+    const end = endDate || today;
 
-    const response = await fetch(`${this.baseUrl}/dashboard?${params.toString()}`, {
-      headers: {
-        'Authorization': getAuthHeader()
-      }
-    });
+    const { data: payments } = await supabase
+      .from('payments')
+      .select('*')
+      .gte('created_at', start)
+      .lte('created_at', end);
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch financial dashboard');
-    }
+    const allPayments = payments || [];
+    const paidPayments = allPayments.filter(p => p.status === 'paid');
+    const pendingPayments = allPayments.filter(p => p.status === 'pending');
+    const overduePayments = pendingPayments.filter(p => p.due_date && p.due_date < today);
 
-    return response.json();
+    const totalRevenue = allPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+    const paidRevenue = paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0);
+
+    return {
+      total_revenue: totalRevenue,
+      paid_revenue: paidRevenue,
+      pending_revenue: pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      overdue_revenue: overduePayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      total_appointments: allPayments.length,
+      paid_appointments: paidPayments.length,
+      pending_appointments: pendingPayments.length,
+      overdue_appointments: overduePayments.length,
+      average_appointment_value: allPayments.length > 0 ? totalRevenue / allPayments.length : 0,
+      payment_rate_percentage: allPayments.length > 0 ? (paidPayments.length / allPayments.length) * 100 : 0
+    };
   }
 
   async getPaymentAlerts(): Promise<PaymentAlert[]> {
-    const response = await fetch(`${this.baseUrl}/alerts`, {
-      headers: {
-        'Authorization': getAuthHeader()
-      }
+    // Buscar pagamentos em atraso
+    const today = new Date().toISOString().split('T')[0];
+    const { data: overduePayments } = await supabase
+      .from('payments')
+      .select('*')
+      .eq('status', 'pending')
+      .lt('due_date', today);
+
+    // Transformar em alertas (sem dados do paciente por enquanto)
+    return (overduePayments || []).map(payment => {
+      const dueDate = new Date(payment.due_date);
+      const daysOverdue = Math.floor((new Date().getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      return {
+        alert_type: 'overdue_payment',
+        alert_message: `Pagamento em atraso há ${daysOverdue} dias`,
+        patient_name: 'Paciente',
+        patient_phone: '',
+        amount: payment.amount || 0,
+        due_date: payment.due_date,
+        days_overdue: daysOverdue,
+        priority: daysOverdue > 30 ? 'high' : daysOverdue > 7 ? 'medium' : 'low'
+      };
     });
-
-    if (!response.ok) {
-      throw new Error('Failed to fetch payment alerts');
-    }
-
-    return response.json();
   }
 
   async getPatientFinancialSummary(patientId: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/patients/${patientId}/summary`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
+    const payments = await this.getPaymentsByPatient(patientId);
+    const paidPayments = payments.filter(p => p.status === 'paid');
+    const pendingPayments = payments.filter(p => p.status === 'pending');
 
-    if (!response.ok) {
-      throw new Error('Failed to fetch patient financial summary');
-    }
-
-    return response.json();
+    return {
+      totalPaid: paidPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      totalPending: pendingPayments.reduce((sum, p) => sum + (p.amount || 0), 0),
+      paymentsCount: payments.length,
+      payments
+    };
   }
 
   async calculateRevenue(startDate: string, endDate: string): Promise<any> {
-    const response = await fetch(`${this.baseUrl}/reports/revenue?start_date=${startDate}&end_date=${endDate}`, {
-      headers: {
-        'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`
-      }
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to calculate revenue');
-    }
-
-    return response.json();
+    return this.getFinancialSummary(startDate, endDate);
   }
 
   // Utility functions

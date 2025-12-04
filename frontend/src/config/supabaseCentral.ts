@@ -139,6 +139,52 @@ export const buscarClientePorTelefone = async (telefone: string): Promise<Client
   return data && data.length > 0 ? data[0] : null;
 };
 
+// Buscar cliente por telefone E nome (mais preciso para evitar duplicatas)
+export const buscarClientePorTelefoneENome = async (telefone: string, nome: string): Promise<ClienteCentral | null> => {
+  const telefoneLimpo = telefone.replace(/\D/g, '');
+  const nomeLimpo = nome.trim().toLowerCase();
+  
+  const { data, error } = await supabaseCentral
+    .from('clientes')
+    .select('*')
+    .eq('telefone', telefoneLimpo);
+
+  if (error) {
+    console.error('Erro ao buscar cliente por telefone e nome:', error);
+    throw error;
+  }
+
+  if (!data || data.length === 0) {
+    return null;
+  }
+
+  // Se só tem um resultado, retorna ele
+  if (data.length === 1) {
+    return data[0];
+  }
+
+  // Se tem múltiplos, busca o que tem nome mais similar
+  const clienteExato = data.find(c => c.nome.toLowerCase() === nomeLimpo);
+  if (clienteExato) {
+    return clienteExato;
+  }
+
+  // Busca por nome parcial (contém)
+  const clienteParcial = data.find(c => 
+    c.nome.toLowerCase().includes(nomeLimpo) || 
+    nomeLimpo.includes(c.nome.toLowerCase())
+  );
+  if (clienteParcial) {
+    return clienteParcial;
+  }
+
+  // Se não encontrou match por nome, retorna o mais recente
+  console.warn(`⚠️ Múltiplos clientes com telefone ${telefoneLimpo}, nenhum com nome "${nome}". Usando o mais recente.`);
+  return data.sort((a, b) => 
+    new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+  )[0];
+};
+
 // Buscar cliente por código (ex: SJM-0002)
 export const buscarClientePorCodigo = async (codigo: string): Promise<ClienteCentral | null> => {
   const { data, error } = await supabaseCentral

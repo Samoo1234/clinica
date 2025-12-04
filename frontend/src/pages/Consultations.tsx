@@ -10,6 +10,7 @@ import { Consultation, ConsultationStatus, ConsultationStats } from '../types/co
 import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
 import { patientSyncService } from '../services/patient-sync'
+import { buscarClientePorTelefoneENome, buscarClientePorCPF } from '../config/supabaseCentral'
 import { getLocalDateString, isToday, isTodayOrFuture, formatDateBR } from '../utils/date'
 
 export default function Consultations() {
@@ -71,7 +72,7 @@ export default function Consultations() {
       setLoadingExternos(true)
       // Buscar TODOS os agendamentos (sem filtro de data ou status)
       const data = await listarAgendamentosExternos({
-        limite: 100
+        limite: 200
       })
       console.log('📊 Agendamentos externos carregados:', data.length)
       setAgendamentosExternos(data)
@@ -82,6 +83,65 @@ export default function Consultations() {
       setLoadingExternos(false)
     }
   }
+
+  // Função para filtrar agendamentos externos
+  const filtrarAgendamentos = (agendamentos: AgendamentoExterno[]) => {
+    return agendamentos.filter(agendamento => {
+      // Filtro por nome do paciente
+      if (filters.patientName) {
+        const nomeNormalizado = agendamento.nome.toLowerCase()
+        if (!nomeNormalizado.includes(filters.patientName.toLowerCase())) {
+          return false
+        }
+      }
+
+      // Filtro por status
+      if (filters.status) {
+        const statusMap: Record<string, string[]> = {
+          'waiting': ['pendente', 'confirmado'],
+          'in_progress': ['em_andamento'],
+          'completed': ['realizado'],
+          'cancelled': ['cancelado', 'faltou']
+        }
+        const statusValidos = statusMap[filters.status] || []
+        if (!statusValidos.includes(agendamento.status)) {
+          return false
+        }
+      }
+
+      // Filtro por médico
+      if (filters.doctorId && agendamento.medico) {
+        if (agendamento.medico.id !== filters.doctorId) {
+          return false
+        }
+      }
+
+      // Filtro por data inicial
+      if (filters.dateFrom) {
+        if (agendamento.data < filters.dateFrom) {
+          return false
+        }
+      }
+
+      // Filtro por data final
+      if (filters.dateTo) {
+        if (agendamento.data > filters.dateTo) {
+          return false
+        }
+      }
+
+      return true
+    })
+  }
+
+  // Obter lista de médicos únicos dos agendamentos
+  const medicosUnicos = Array.from(
+    new Map(
+      agendamentosExternos
+        .filter(a => a.medico)
+        .map(a => [a.medico!.id, { id: a.medico!.id, name: a.medico!.nome }])
+    ).values()
+  )
 
   const handleStartConsultation = async (appointmentId: string) => {
     // Esta função é usada pelo modal antigo - redirecionar para usar agendamentos externos
@@ -159,10 +219,29 @@ export default function Consultations() {
   // Iniciar consulta a partir de agendamento externo (funciona sem backend)
   const handleStartExternalConsultation = async (agendamento: AgendamentoExterno) => {
     try {
-      // Verificar se tem CPF para buscar histórico
+      // Buscar dados do cliente no banco CENTRAL
+      let cpfCliente = agendamento.cpf || ''
+      let clienteCentralId = agendamento.id
+      let dataNascimento = agendamento.data_nascimento || ''
       let historicoInfo = ''
-      if (agendamento.cpf) {
-        const historico = await patientSyncService.buscarHistoricoMedicoPorCPF(agendamento.cpf)
+      
+      // Se não tem CPF no agendamento, tentar buscar no banco central por telefone + nome
+      if (!cpfCliente && agendamento.telefone) {
+        console.log('🔍 Buscando cliente no banco central por telefone + nome:', agendamento.telefone, agendamento.nome)
+        const clienteCentral = await buscarClientePorTelefoneENome(agendamento.telefone, agendamento.nome)
+        if (clienteCentral) {
+          console.log('✅ Cliente encontrado no banco central:', clienteCentral.nome, 'CPF:', clienteCentral.cpf)
+          cpfCliente = clienteCentral.cpf || ''
+          clienteCentralId = clienteCentral.id
+          dataNascimento = clienteCentral.data_nascimento || dataNascimento
+        } else {
+          console.log('⚠️ Cliente não encontrado no banco central por telefone')
+        }
+      }
+      
+      // Verificar se tem CPF para buscar histórico
+      if (cpfCliente) {
+        const historico = await patientSyncService.buscarHistoricoMedicoPorCPF(cpfCliente)
         if (historico.totalConsultas > 0) {
           historicoInfo = ` (${historico.totalConsultas} consulta(s) anterior(es))`
           console.log('📋 Histórico encontrado:', historico)
@@ -173,18 +252,18 @@ export default function Consultations() {
       const novaConsulta: Consultation = {
         id: `ext-${agendamento.id}`,
         appointmentId: agendamento.id,
-        patientId: agendamento.id, // Usar ID do agendamento como referência
+        patientId: clienteCentralId, // Usar ID do cliente central se encontrado
         doctorId: agendamento.medico?.id || '',
         status: 'in_progress',
         startedAt: new Date().toISOString(),
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-        // Dados do paciente vindos do agendamento externo
+        // Dados do paciente vindos do agendamento externo + banco central
         patient: {
-          id: agendamento.id,
+          id: clienteCentralId,
           name: agendamento.nome,
-          cpf: agendamento.cpf || '',
-          birthDate: agendamento.data_nascimento || '',
+          cpf: cpfCliente,
+          birthDate: dataNascimento,
           phone: agendamento.telefone,
           email: agendamento.email || undefined
         },
@@ -318,15 +397,28 @@ export default function Consultations() {
               </div>
             ) : (
               <div className="grid gap-2">
-                {agendamentosExternos
-                  .filter((agendamento) => {
-                    // Filtrar apenas agendamentos de hoje ou futuros (fuso horário local)
-                    return isTodayOrFuture(agendamento.data)
-                  })
-                  .map((agendamento) => {
-                  const dataAgendamento = agendamento.data
-                  const isHoje = isToday(dataAgendamento)
-                  const isFuture = !isHoje && isTodayOrFuture(dataAgendamento)
+                {(() => {
+                  // Aplica filtros do usuário primeiro
+                  const agendamentosFiltrados = filtrarAgendamentos(agendamentosExternos)
+                  
+                  // Se não tem filtro de data, mostra apenas hoje/futuro
+                  const hasDateFilter = filters.dateFrom || filters.dateTo
+                  const agendamentosParaExibir = hasDateFilter 
+                    ? agendamentosFiltrados 
+                    : agendamentosFiltrados.filter(a => isTodayOrFuture(a.data))
+                  
+                  if (agendamentosParaExibir.length === 0) {
+                    return (
+                      <div className="text-center py-8 text-gray-500">
+                        Nenhum agendamento encontrado com os filtros selecionados
+                      </div>
+                    )
+                  }
+                  
+                  return agendamentosParaExibir.map((agendamento) => {
+                    const dataAgendamento = agendamento.data
+                    const isHoje = isToday(dataAgendamento)
+                    const isFuture = !isHoje && isTodayOrFuture(dataAgendamento)
                   
                   return (
                     <div
@@ -402,7 +494,8 @@ export default function Consultations() {
                       </div>
                     </div>
                   )
-                })}
+                })
+                })()}
               </div>
             )}
           </div>
@@ -420,6 +513,7 @@ export default function Consultations() {
           dateFrom: '',
           dateTo: ''
         })}
+        doctors={medicosUnicos}
       />
 
       {/* Main Content */}

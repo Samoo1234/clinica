@@ -6,25 +6,16 @@ interface ConsultationFiltersProps {
   filters: Filters
   onFiltersChange: (filters: Filters) => void
   onClearFilters: () => void
+  doctors?: Array<{ id: string, name: string }>
 }
 
 export function ConsultationFilters({
   filters,
   onFiltersChange,
-  onClearFilters
+  onClearFilters,
+  doctors = []
 }: ConsultationFiltersProps) {
   const [showFilters, setShowFilters] = useState(false)
-  const [doctors, setDoctors] = useState<Array<{ id: string, name: string }>>([])
-
-  useEffect(() => {
-    // Load doctors list - this would typically come from an API
-    // For now, we'll use a mock list
-    setDoctors([
-      { id: '1', name: 'Dr. João Silva' },
-      { id: '2', name: 'Dr. Maria Santos' },
-      { id: '3', name: 'Dr. Pedro Costa' }
-    ])
-  }, [])
 
   const handleFilterChange = (key: keyof Filters, value: string) => {
     onFiltersChange({
