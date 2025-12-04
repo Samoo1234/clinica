@@ -30,7 +30,10 @@ export function ConsultationDetails({
   canEdit
 }: ConsultationDetailsProps) {
   const [showCompleteModal, setShowCompleteModal] = useState(false)
-  const [editingExame, setEditingExame] = useState(false)
+  // Exame começa em modo de edição se a consulta está em andamento e não tem exame preenchido
+  const [editingExame, setEditingExame] = useState(
+    consultation.status === 'in_progress' && !consultation.exameOftalmologico
+  )
   const [editingNotes, setEditingNotes] = useState(false)
 
   const formatDateTime = (dateString: string) => {

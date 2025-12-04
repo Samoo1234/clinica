@@ -1,17 +1,17 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/SimpleAuthContext'
 import { useToast } from '../contexts/ToastContext'
 import { ConsultationList } from '../components/consultations/ConsultationList'
 import { ConsultationDetails } from '../components/consultations/ConsultationDetails'
 import { ConsultationFilters } from '../components/consultations/ConsultationFilters'
 import { StartConsultationModal } from '../components/consultations/StartConsultationModal'
-// import { consultationsService } from '../services/consultations' // Removido - usando dados do banco EXTERNO
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
-import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle } from 'lucide-react'
+import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
 import { patientSyncService } from '../services/patient-sync'
 import { buscarClientePorTelefoneENome, buscarClientePorCPF } from '../config/supabaseCentral'
 import { getLocalDateString, isToday, isTodayOrFuture, formatDateBR } from '../utils/date'
+import { consultationPersistenceService } from '../services/consultation-persistence'
 
 export default function Consultations() {
   const { user } = useAuth()
@@ -42,10 +42,30 @@ export default function Consultations() {
     pending: 0
   })
 
-  // Carregar agendamentos externos automaticamente ao montar
+  // Carregar agendamentos externos e consultas em andamento ao montar
   useEffect(() => {
     loadAgendamentosExternos()
+    loadConsultasEmAndamento()
   }, [])
+
+  // Carregar consultas em andamento do banco (recuperação de dados)
+  const loadConsultasEmAndamento = async () => {
+    try {
+      setLoading(true)
+      console.log('🔄 Carregando consultas em andamento do banco...')
+      const consultasRecuperadas = await consultationPersistenceService.buscarConsultasEmAndamento()
+      
+      if (consultasRecuperadas.length > 0) {
+        console.log(`✅ ${consultasRecuperadas.length} consulta(s) recuperada(s) do banco`)
+        setConsultations(consultasRecuperadas)
+        showSuccess(`${consultasRecuperadas.length} consulta(s) em andamento recuperada(s)`)
+      }
+    } catch (error) {
+      console.error('❌ Erro ao carregar consultas em andamento:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Atualizar stats quando agendamentos externos carregarem
   useEffect(() => {
@@ -161,7 +181,57 @@ export default function Consultations() {
       setSelectedConsultation(updated)
     }
     
-    showSuccess('Consulta atualizada')
+    // PERSISTIR NO BANCO - auto-save
+    const resultado = await consultationPersistenceService.atualizarConsulta(consultationId, updates)
+    if (!resultado.success) {
+      console.error('⚠️ Falha ao persistir atualização:', resultado.error)
+    }
+  }
+
+  // Função para converter ExameOftalmologico para o formato do banco
+  const converterExameParaBanco = (exame: any) => {
+    if (!exame) return {}
+    
+    return {
+      // Acuidade Visual
+      visualAcuity: {
+        rightEye: exame.acuidadeOD || '',
+        leftEye: exame.acuidadeOE || '',
+        bothEyes: exame.acuidadeAO || ''
+      },
+      // Pressão Intraocular
+      intraocularPressure: {
+        rightEye: exame.pressaoOD || 0,
+        leftEye: exame.pressaoOE || 0
+      },
+      // Refração OD
+      refractionOD: exame.refracaoOD ? {
+        spherical: exame.refracaoOD.esferico || '',
+        cylindrical: exame.refracaoOD.cilindrico || '',
+        axis: exame.refracaoOD.eixo || 0,
+        addition: exame.refracaoOD.adicao || '',
+        dnp: exame.refracaoOD.dnp || 0,
+        acuity: exame.refracaoOD.acuidade || ''
+      } : null,
+      // Refração OE
+      refractionOE: exame.refracaoOE ? {
+        spherical: exame.refracaoOE.esferico || '',
+        cylindrical: exame.refracaoOE.cilindrico || '',
+        axis: exame.refracaoOE.eixo || 0,
+        addition: exame.refracaoOE.adicao || '',
+        dnp: exame.refracaoOE.dnp || 0,
+        acuity: exame.refracaoOE.acuidade || ''
+      } : null,
+      // Outros exames
+      biomicroscopy: exame.biomicroscopia || '',
+      fundoscopy: exame.fundoscopia || '',
+      ocularMotility: exame.motilidadeOcular || '',
+      pupillaryReflexes: exame.reflexosPupilares || '',
+      visualField: exame.campoVisual || '',
+      // Lentes de contato
+      contactLenses: exame.usoLentesContato || false,
+      contactLensType: exame.tipoLentesContato || ''
+    }
   }
 
   const handleCompleteConsultation = async (consultationId: string, medicalRecordData: any) => {
@@ -172,6 +242,10 @@ export default function Consultations() {
       showError('CPF do paciente é obrigatório para finalizar a consulta')
       return
     }
+
+    // Converter exame oftalmológico para formato do banco
+    const physicalExam = converterExameParaBanco(consulta.exameOftalmologico)
+    console.log('📋 Exame oftalmológico a ser salvo:', physicalExam)
 
     try {
       // Usar o serviço de sincronização para persistir os dados
@@ -186,7 +260,8 @@ export default function Consultations() {
         doctor_id: user?.id || consulta.doctorId,
         agendamento_id: consulta.appointmentId,
         chief_complaint: consulta.queixaPrincipal || medicalRecordData.notes,
-        physical_exam: consulta.exameOftalmologico || {},
+        anamnesis: (consulta as any).anamnese || medicalRecordData.treatment || '',
+        physical_exam: physicalExam,
         diagnosis: medicalRecordData.diagnosis,
         prescription: medicalRecordData.prescription,
         follow_up_date: medicalRecordData.followUpDate
@@ -196,13 +271,12 @@ export default function Consultations() {
         throw new Error(resultado.error || 'Erro ao finalizar consulta')
       }
 
-      // Atualizar lista local
-      setConsultations(prev => 
-        prev.map(c => c.id === consultationId 
-          ? { ...c, status: 'completed' as const, completedAt: new Date().toISOString(), ...medicalRecordData }
-          : c
-        )
-      )
+      // Marcar consulta como finalizada no banco de consultas
+      await consultationPersistenceService.finalizarConsulta(consultationId)
+      console.log('✅ Consulta finalizada no banco de persistência')
+
+      // Atualizar lista local - remover da lista de consultas em andamento
+      setConsultations(prev => prev.filter(c => c.id !== consultationId))
       setSelectedConsultation(null)
       
       // Recarregar agendamentos para atualizar status
@@ -249,8 +323,11 @@ export default function Consultations() {
       }
 
       // Criar consulta local a partir do agendamento externo
+      // Gerar UUID válido para a consulta
+      const consultaId = crypto.randomUUID()
+      
       const novaConsulta: Consultation = {
-        id: `ext-${agendamento.id}`,
+        id: consultaId,
         appointmentId: agendamento.id,
         patientId: clienteCentralId, // Usar ID do cliente central se encontrado
         doctorId: agendamento.medico?.id || '',
@@ -281,6 +358,15 @@ export default function Consultations() {
           duration: 30
         }
       }
+      
+      // PERSISTIR NO BANCO - salvar consulta ao iniciar
+      const resultado = await consultationPersistenceService.criarConsulta(novaConsulta)
+      if (!resultado.success) {
+        console.error('⚠️ Falha ao persistir consulta:', resultado.error)
+        showError('Erro ao salvar consulta no banco')
+        return
+      }
+      console.log('✅ Consulta persistida no banco:', novaConsulta.id)
       
       setConsultations(prev => [novaConsulta, ...prev])
       setSelectedConsultation(novaConsulta)

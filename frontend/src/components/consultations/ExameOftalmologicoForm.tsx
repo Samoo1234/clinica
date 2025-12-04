@@ -3,8 +3,8 @@
  * Campos específicos para consulta em clínica oftalmológica
  */
 
-import { useState, useEffect } from 'react'
-import { Eye, Save, X } from 'lucide-react'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { Eye, Save, X, CheckCircle } from 'lucide-react'
 import { ExameOftalmologico, RefractionData } from '../../types/consultations'
 
 interface ExameOftalmologicoFormProps {
@@ -13,6 +13,7 @@ interface ExameOftalmologicoFormProps {
   onSave: (exame: ExameOftalmologico) => void
   onCancel: () => void
   readOnly?: boolean
+  autoSave?: boolean // Habilitar auto-save
 }
 
 export function ExameOftalmologicoForm({
@@ -20,9 +21,13 @@ export function ExameOftalmologicoForm({
   editing,
   onSave,
   onCancel,
-  readOnly = false
+  readOnly = false,
+  autoSave = true // Auto-save habilitado por padrão
 }: ExameOftalmologicoFormProps) {
   const [formData, setFormData] = useState<ExameOftalmologico>(exame || {})
+  const [hasChanges, setHasChanges] = useState(false)
+  const [lastSaved, setLastSaved] = useState<Date | null>(null)
+  const autoSaveTimeout = useRef<NodeJS.Timeout | null>(null)
 
   useEffect(() => {
     if (exame) {
@@ -30,8 +35,44 @@ export function ExameOftalmologicoForm({
     }
   }, [exame])
 
+  // Auto-save com debounce de 1.5 segundos
+  const triggerAutoSave = useCallback((data: ExameOftalmologico) => {
+    if (!autoSave || readOnly) return
+    
+    if (autoSaveTimeout.current) {
+      clearTimeout(autoSaveTimeout.current)
+    }
+    
+    autoSaveTimeout.current = setTimeout(() => {
+      // Verificar se há dados preenchidos
+      const hasData = Object.values(data).some(v => 
+        v !== undefined && v !== null && v !== '' && 
+        (typeof v !== 'object' || Object.keys(v).length > 0)
+      )
+      
+      if (hasData) {
+        console.log('💾 Auto-salvando exame oftalmológico:', data)
+        onSave(data)
+        setLastSaved(new Date())
+        setHasChanges(false)
+      }
+    }, 1500)
+  }, [autoSave, readOnly, onSave])
+
+  // Cleanup
+  useEffect(() => {
+    return () => {
+      if (autoSaveTimeout.current) {
+        clearTimeout(autoSaveTimeout.current)
+      }
+    }
+  }, [])
+
   const handleChange = (field: keyof ExameOftalmologico, value: any) => {
-    setFormData(prev => ({ ...prev, [field]: value }))
+    const newData = { ...formData, [field]: value }
+    setFormData(newData)
+    setHasChanges(true)
+    triggerAutoSave(newData)
   }
 
   const handleRefracaoChange = (
@@ -39,13 +80,16 @@ export function ExameOftalmologicoForm({
     field: keyof RefractionData,
     value: any
   ) => {
-    setFormData(prev => ({
-      ...prev,
+    const newData = {
+      ...formData,
       [olho]: {
-        ...prev[olho],
+        ...formData[olho],
         [field]: value
       }
-    }))
+    }
+    setFormData(newData)
+    setHasChanges(true)
+    triggerAutoSave(newData)
   }
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -145,6 +189,14 @@ export function ExameOftalmologicoForm({
 
   return (
     <form onSubmit={handleSubmit} className="bg-gray-50 rounded-lg p-4 space-y-6">
+      {/* Auto-save indicator */}
+      {autoSave && lastSaved && (
+        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-lg">
+          <CheckCircle className="w-3 h-3" />
+          <span>Dados salvos automaticamente às {lastSaved.toLocaleTimeString('pt-BR')}</span>
+        </div>
+      )}
+      
       {/* Acuidade Visual */}
       <div>
         <h4 className="font-medium text-gray-700 mb-3 flex items-center gap-2">
