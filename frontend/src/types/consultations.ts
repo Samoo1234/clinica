@@ -102,8 +102,6 @@ export interface Consultation {
   doctor?: {
     id: string
     name: string
-    email: string
-    specialization?: string
   }
   
   appointment?: {

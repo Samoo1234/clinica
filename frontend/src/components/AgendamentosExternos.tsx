@@ -237,11 +237,6 @@ export function AgendamentosExternos() {
                       <div className="text-sm text-gray-900">
                         {agendamento.medico?.nome || 'N/A'}
                       </div>
-                      {agendamento.medico?.especialidade && (
-                        <div className="text-sm text-gray-500">
-                          {agendamento.medico.especialidade}
-                        </div>
-                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {agendamento.cidade}

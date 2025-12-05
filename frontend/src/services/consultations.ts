@@ -231,9 +231,7 @@ class ConsultationsService {
       },
       doctor: agendamentoExterno.medico ? {
         id: doctorId || agendamentoExterno.medico.id,
-        name: agendamentoExterno.medico.nome,
-        email: '',
-        specialization: agendamentoExterno.medico.especialidade
+        name: agendamentoExterno.medico.nome
       } : undefined,
       appointment: {
         id: agendamentoExterno.id,

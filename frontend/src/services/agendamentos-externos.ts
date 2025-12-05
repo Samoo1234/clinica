@@ -60,8 +60,6 @@ export interface AgendamentoExterno {
   medico?: {
     id: string
     nome: string
-    especialidade: string | null
-    crm: string | null
   }
   cliente?: ClienteExterno
 }
@@ -121,7 +119,7 @@ export async function listarAgendamentosExternos(
       .from('agendamentos')
       .select(`
         *,
-        medico:medicos(id, nome, especialidade, crm)
+        medico:medicos(id, nome)
       `)
       .order('data', { ascending: true })
       .order('horario', { ascending: true })
@@ -238,7 +236,7 @@ export async function buscarAgendamentosPorNome(nome: string): Promise<Agendamen
       .from('agendamentos')
       .select(`
         *,
-        medico:medicos(id, nome, especialidade, crm)
+        medico:medicos(id, nome)
       `)
       .ilike('nome', `%${nome}%`)
       .order('data', { ascending: false })

@@ -359,15 +359,8 @@ export function AppointmentsExternal() {
                     </td>
                     <td className="px-6 py-4">
                       {agendamento.medico ? (
-                        <div>
-                          <div className="text-sm font-medium text-gray-900">
-                            {agendamento.medico.nome}
-                          </div>
-                          {agendamento.medico.especialidade && (
-                            <div className="text-sm text-gray-500">
-                              {agendamento.medico.especialidade}
-                            </div>
-                          )}
+                        <div className="text-sm font-medium text-gray-900">
+                          {agendamento.medico.nome}
                         </div>
                       ) : (
                         <span className="text-gray-400">-</span>

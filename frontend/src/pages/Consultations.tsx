@@ -4,9 +4,8 @@ import { useToast } from '../contexts/ToastContext'
 import { ConsultationList } from '../components/consultations/ConsultationList'
 import { ConsultationDetails } from '../components/consultations/ConsultationDetails'
 import { ConsultationFilters } from '../components/consultations/ConsultationFilters'
-import { StartConsultationModal } from '../components/consultations/StartConsultationModal'
 import { Consultation, ConsultationStatus, ConsultationStats } from '../types/consultations'
-import { Plus, Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
+import { Calendar, Clock, Users, ExternalLink, User, FileText, AlertCircle, CheckCircle, XCircle, RefreshCw } from 'lucide-react'
 import { listarAgendamentosExternos, type AgendamentoExterno } from '../services/agendamentos-externos'
 import { patientSyncService } from '../services/patient-sync'
 import { buscarClientePorTelefoneENome, buscarClientePorCPF } from '../config/supabaseCentral'
@@ -20,7 +19,6 @@ export default function Consultations() {
   const [consultations, setConsultations] = useState<Consultation[]>([])
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null)
   const [loading, setLoading] = useState(true)
-  const [showStartModal, setShowStartModal] = useState(false)
   const [filters, setFilters] = useState({
     status: '' as ConsultationStatus | '',
     doctorId: '',
@@ -34,6 +32,9 @@ export default function Consultations() {
   const [loadingExternos, setLoadingExternos] = useState(false)
   const [mostrarExternos, setMostrarExternos] = useState(true) // Mostrar por padrão
 
+  // Consultas finalizadas (para exibição na lista)
+  const [consultasFinalizadas, setConsultasFinalizadas] = useState<Consultation[]>([])
+
   // Stats
   const [stats, setStats] = useState<ConsultationStats>({
     today: 0,
@@ -42,10 +43,11 @@ export default function Consultations() {
     pending: 0
   })
 
-  // Carregar agendamentos externos e consultas em andamento ao montar
+  // Carregar agendamentos externos e consultas ao montar
   useEffect(() => {
     loadAgendamentosExternos()
     loadConsultasEmAndamento()
+    loadConsultasFinalizadas()
   }, [])
 
   // Carregar consultas em andamento do banco (recuperação de dados)
@@ -67,13 +69,25 @@ export default function Consultations() {
     }
   }
 
-  // Atualizar stats quando agendamentos externos carregarem
-  useEffect(() => {
-    updateStatsFromExternos()
-  }, [agendamentosExternos])
+  // Carregar consultas finalizadas do banco
+  const loadConsultasFinalizadas = async () => {
+    try {
+      console.log('🔄 Carregando consultas finalizadas...')
+      const finalizadas = await consultationPersistenceService.buscarConsultasFinalizadas(50)
+      console.log(`✅ ${finalizadas.length} consulta(s) finalizada(s) carregada(s)`)
+      setConsultasFinalizadas(finalizadas)
+    } catch (error) {
+      console.error('❌ Erro ao carregar consultas finalizadas:', error)
+    }
+  }
 
-  // Calcular estatísticas a partir dos agendamentos externos
-  const updateStatsFromExternos = () => {
+  // Atualizar stats quando dados mudarem
+  useEffect(() => {
+    updateStats()
+  }, [agendamentosExternos, consultations, consultasFinalizadas])
+
+  // Calcular estatísticas
+  const updateStats = () => {
     const hoje = getLocalDateString()
     const agendamentosHoje = agendamentosExternos.filter(a => a.data === hoje)
     const pendentes = agendamentosExternos.filter(a => a.status === 'pendente' || a.status === 'confirmado')
@@ -162,12 +176,6 @@ export default function Consultations() {
         .map(a => [a.medico!.id, { id: a.medico!.id, name: a.medico!.nome }])
     ).values()
   )
-
-  const handleStartConsultation = async (appointmentId: string) => {
-    // Esta função é usada pelo modal antigo - redirecionar para usar agendamentos externos
-    showError('Use os agendamentos externos para iniciar uma consulta')
-    setShowStartModal(false)
-  }
 
   const handleUpdateConsultation = async (consultationId: string, updates: Partial<Consultation>) => {
     const currentConsultation = consultations.find(c => c.id === consultationId) as any
@@ -279,8 +287,9 @@ export default function Consultations() {
       setConsultations(prev => prev.filter(c => c.id !== consultationId))
       setSelectedConsultation(null)
       
-      // Recarregar agendamentos para atualizar status
+      // Recarregar agendamentos e consultas finalizadas
       loadAgendamentosExternos()
+      loadConsultasFinalizadas()
       
       showSuccess('Consulta finalizada e prontuário salvo com sucesso!')
 
@@ -347,9 +356,7 @@ export default function Consultations() {
         // Dados do médico
         doctor: agendamento.medico ? {
           id: agendamento.medico.id,
-          name: agendamento.medico.nome,
-          email: '',
-          specialization: agendamento.medico.especialidade || undefined
+          name: agendamento.medico.nome
         } : undefined,
         // Dados do agendamento
         appointment: {
@@ -376,7 +383,7 @@ export default function Consultations() {
     }
   }
 
-  // Check if user can start consultations (doctors only)
+  // Check if user can start/edit consultations (doctors only)
   const canStartConsultations = user?.role === 'doctor' || user?.role === 'admin'
 
   return (
@@ -389,15 +396,6 @@ export default function Consultations() {
             Gerencie e acompanhe as consultas médicas
           </p>
         </div>
-        {canStartConsultations && (
-          <button
-            onClick={() => setShowStartModal(true)}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Iniciar Consulta</span>
-          </button>
-        )}
       </div>
 
       {/* Stats Cards */}
@@ -546,7 +544,6 @@ export default function Consultations() {
                             {agendamento.medico && (
                               <div className="text-gray-500">
                                 👨‍⚕️ {agendamento.medico.nome}
-                                {agendamento.medico.especialidade && ` - ${agendamento.medico.especialidade}`}
                               </div>
                             )}
                             {agendamento.cidade && (
@@ -558,7 +555,7 @@ export default function Consultations() {
                           <span className="px-3 py-1 bg-gray-100 text-gray-700 text-sm rounded-full">
                             {agendamento.status}
                           </span>
-                          {canStartConsultations && (
+                          {canStartConsultations && agendamento.status !== 'realizado' && (
                             <button
                               disabled={!isHoje}
                               onClick={() => handleStartExternalConsultation(agendamento)}
@@ -604,10 +601,10 @@ export default function Consultations() {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Consultation List */}
+        {/* Consultation List - Em andamento + Finalizadas */}
         <div className="lg:col-span-1">
           <ConsultationList
-            consultations={consultations}
+            consultations={[...consultations, ...consultasFinalizadas]}
             loading={loading}
             selectedConsultation={selectedConsultation}
             onSelectConsultation={setSelectedConsultation}
@@ -640,13 +637,6 @@ export default function Consultations() {
         </div>
       </div>
 
-      {/* Start Consultation Modal */}
-      {showStartModal && (
-        <StartConsultationModal
-          onClose={() => setShowStartModal(false)}
-          onStartConsultation={handleStartConsultation}
-        />
-      )}
     </div>
   )
 }

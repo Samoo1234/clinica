@@ -30,6 +30,7 @@ interface ConsultationDB {
   prescription?: string
   follow_up_date?: string
   patient_data: any
+  doctor_data: any  // Dados do médico
   agendamento_externo_id?: string
   created_at?: string
   updated_at?: string
@@ -53,6 +54,7 @@ class ConsultationPersistenceService {
         chief_complaint: consulta.queixaPrincipal || null,
         notes: consulta.notes || null,
         patient_data: consulta.patient || {},
+        doctor_data: consulta.doctor || {},  // Salvar dados do médico
         agendamento_externo_id: consulta.appointmentId || null,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
@@ -142,6 +144,34 @@ class ConsultationPersistenceService {
       return data.map(db => this.converterParaFrontend(db))
     } catch (error) {
       console.error('❌ Erro ao buscar consultas em andamento:', error)
+      return []
+    }
+  }
+
+  /**
+   * Buscar consultas finalizadas (realizadas)
+   */
+  async buscarConsultasFinalizadas(limite: number = 50): Promise<Consultation[]> {
+    try {
+      const { data, error } = await supabase
+        .from('consultations')
+        .select('*')
+        .eq('status', 'completed')
+        .order('end_time', { ascending: false })
+        .limit(limite)
+
+      if (error) {
+        console.error('❌ Erro ao buscar consultas finalizadas:', error)
+        return []
+      }
+
+      if (!data || data.length === 0) {
+        return []
+      }
+
+      return data.map(db => this.converterParaFrontend(db))
+    } catch (error) {
+      console.error('❌ Erro ao buscar consultas finalizadas:', error)
       return []
     }
   }
@@ -261,6 +291,7 @@ class ConsultationPersistenceService {
       diagnosis: db.diagnosis || undefined,
       prescription: db.prescription || undefined,
       patient: db.patient_data || undefined,
+      doctor: db.doctor_data || undefined,  // Dados do médico
       createdAt: db.created_at || '',
       updatedAt: db.updated_at || ''
     }
